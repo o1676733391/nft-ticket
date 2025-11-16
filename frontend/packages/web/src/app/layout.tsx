@@ -1,0 +1,25 @@
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'NFT Ticket - Decentralized Ticketing Platform',
+  description: 'Buy, sell, and manage event tickets on the blockchain',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        {/* TODO: Add Providers (Wagmi, React Query, Supabase) */}
+        {children}
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,21 @@
+{
+  "name": "nft-ticket-frontend",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:mobile": "turbo run dev --filter=mobile",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=web",
+    "build:mobile": "turbo run build --filter=mobile",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0"
+  }
+}

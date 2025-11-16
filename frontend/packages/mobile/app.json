@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "NFT Ticket",
+    "slug": "nft-ticket",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.nftticket",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access to scan QR codes for ticket check-in"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "package": "com.yourcompany.nftticket",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera for QR scanning"
+        }
+      ]
+    ],
+    "scheme": "nftticket",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
