@@ -5,12 +5,14 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
 /**
  * @title Marketplace
  * @dev Marketplace để mua bán vé NFT với royalty
+ * @dev Supports ERC-2771 for gasless transactions via Account Abstraction
  */
-contract Marketplace is ReentrancyGuard, Ownable {
+contract Marketplace is ERC2771Context, ReentrancyGuard, Ownable {
     IERC721 public ticketNFT;
     IERC20 public systemToken;
 
@@ -47,8 +49,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
 
     constructor(
         address _ticketNFT,
-        address _systemToken
-    ) Ownable(msg.sender) {
+        address _systemToken,
+        address trustedForwarder
+    ) ERC2771Context(trustedForwarder) Ownable() {
         ticketNFT = IERC721(_ticketNFT);
         systemToken = IERC20(_systemToken);
         feeRecipient = msg.sender;
@@ -64,8 +67,8 @@ contract Marketplace is ReentrancyGuard, Ownable {
     ) external {
         require(fee <= 1000, "Royalty fee too high"); // Max 10%
         require(
-            ticketNFT.ownerOf(tokenId) == msg.sender || 
-            msg.sender == owner(),
+            ticketNFT.ownerOf(tokenId) == _msgSender() || 
+            _msgSender() == owner(),
             "Not authorized"
         );
 
@@ -81,21 +84,21 @@ contract Marketplace is ReentrancyGuard, Ownable {
      * @dev List vé để bán
      */
     function list(uint256 tokenId, uint256 price) external nonReentrant {
-        require(ticketNFT.ownerOf(tokenId) == msg.sender, "Not owner");
+        require(ticketNFT.ownerOf(tokenId) == _msgSender(), "Not owner");
         require(price > 0, "Price must be greater than 0");
         require(!listings[tokenId].isActive, "Already listed");
 
         // Transfer NFT to marketplace
-        ticketNFT.transferFrom(msg.sender, address(this), tokenId);
+        ticketNFT.transferFrom(_msgSender(), address(this), tokenId);
 
         listings[tokenId] = Listing({
             tokenId: tokenId,
-            seller: msg.sender,
+            seller: _msgSender(),
             price: price,
             isActive: true
         });
 
-        emit Listed(tokenId, msg.sender, price);
+        emit Listed(tokenId, _msgSender(), price);
     }
 
     /**
@@ -104,14 +107,14 @@ contract Marketplace is ReentrancyGuard, Ownable {
     function unlist(uint256 tokenId) external nonReentrant {
         Listing storage listing = listings[tokenId];
         require(listing.isActive, "Not listed");
-        require(listing.seller == msg.sender, "Not seller");
+        require(listing.seller == _msgSender(), "Not seller");
 
         listing.isActive = false;
 
         // Return NFT to seller
-        ticketNFT.transferFrom(address(this), msg.sender, tokenId);
+        ticketNFT.transferFrom(address(this), _msgSender(), tokenId);
 
-        emit Unlisted(tokenId, msg.sender);
+        emit Unlisted(tokenId, _msgSender());
     }
 
     /**
@@ -120,7 +123,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
     function buy(uint256 tokenId) external nonReentrant {
         Listing storage listing = listings[tokenId];
         require(listing.isActive, "Not listed");
-        require(msg.sender != listing.seller, "Cannot buy own listing");
+        require(_msgSender() != listing.seller, "Cannot buy own listing");
 
         uint256 price = listing.price;
         address seller = listing.seller;
@@ -139,20 +142,20 @@ contract Marketplace is ReentrancyGuard, Ownable {
 
         // Transfer tokens
         require(
-            systemToken.transferFrom(msg.sender, seller, sellerAmount),
+            systemToken.transferFrom(_msgSender(), seller, sellerAmount),
             "Transfer to seller failed"
         );
 
         if (platformAmount > 0) {
             require(
-                systemToken.transferFrom(msg.sender, feeRecipient, platformAmount),
+                systemToken.transferFrom(_msgSender(), feeRecipient, platformAmount),
                 "Transfer platform fee failed"
             );
         }
 
         if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
             require(
-                systemToken.transferFrom(msg.sender, royaltyRecipient, royaltyAmount),
+                systemToken.transferFrom(_msgSender(), royaltyRecipient, royaltyAmount),
                 "Transfer royalty failed"
             );
         }
@@ -161,9 +164,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         listing.isActive = false;
 
         // Transfer NFT to buyer
-        ticketNFT.transferFrom(address(this), msg.sender, tokenId);
+        ticketNFT.transferFrom(address(this), _msgSender(), tokenId);
 
-        emit Sold(tokenId, seller, msg.sender, price);
+        emit Sold(tokenId, seller, _msgSender(), price);
     }
 
     /**
@@ -172,11 +175,11 @@ contract Marketplace is ReentrancyGuard, Ownable {
     function updatePrice(uint256 tokenId, uint256 newPrice) external {
         Listing storage listing = listings[tokenId];
         require(listing.isActive, "Not listed");
-        require(listing.seller == msg.sender, "Not seller");
+        require(listing.seller == _msgSender(), "Not seller");
         require(newPrice > 0, "Price must be greater than 0");
 
         listing.price = newPrice;
-        emit Listed(tokenId, msg.sender, newPrice);
+        emit Listed(tokenId, _msgSender(), newPrice);
     }
 
     /**
@@ -214,5 +217,27 @@ contract Marketplace is ReentrancyGuard, Ownable {
         ticketNFT.transferFrom(address(this), listing.seller, tokenId);
 
         emit Unlisted(tokenId, listing.seller);
+    }
+
+    /**
+     * @dev Override _msgSender to support ERC-2771 (gasless transactions)
+     */
+    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) {
+        return ERC2771Context._msgSender();
+    }
+
+    /**
+     * @dev Override _msgData to support ERC-2771
+     */
+    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /**
+     * @dev Override _contextSuffixLength for ERC-2771
+     */
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        // Custom logic for _contextSuffixLength
+        return 0; // Example return value
     }
 }

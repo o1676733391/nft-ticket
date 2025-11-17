@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase API Tester</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 20px auto; padding: 0 15px; background-color: #f9f9f9; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .endpoint { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+        .endpoint h2 { margin-top: 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #2d2d2d; color: #f1f1f1; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+        .method { font-size: 0.8em; font-weight: bold; color: #fff; padding: 3px 8px; border-radius: 3px; display: inline-block; margin-left: 10px; }
+        .post { background-color: #28a745; }
+        .put { background-color: #ffc107; color: #333; }
+        .note { font-size: 0.9em; color: #666; background-color: #f0f0f0; padding: 10px; border-left: 3px solid #007bff; margin-top: 10px; border-radius: 4px;}
+    </style>
+</head>
+<body>
+
+    <h1>Supabase Edge Functions API Tester</h1>
+    <p class="note">This file provides a simple interface to test your deployed Supabase Edge Functions. Fill in the parameters and click "Test" to see the response.</p>
+    <p class="note"><strong>Authentication:</strong> For functions that require it (like Event Manager), first get a JWT by successfully calling `auth-verify`, then paste that token into the "Auth JWT" field.</p>
+
+    <!-- Auth Verify -->
+    <div class="endpoint">
+        <h2>auth-verify <span class="method post">POST</span></h2>
+        <p class="note">Verifies a wallet signature to authenticate a user. <strong>Note:</strong> You must generate a signature from a wallet (e.g., using Ethers.js `wallet.signMessage()`) and paste it here.</p>
+        <form id="auth-verify-form">
+            <label for="auth-message">Message:</label>
+            <input type="text" id="auth-message" value="Please sign this message to authenticate.">
+            <label for="auth-signature">Signature:</label>
+            <input type="text" id="auth-signature" placeholder="0x...">
+            <label for="auth-address">Address:</label>
+            <input type="text" id="auth-address" placeholder="0x...">
+            <button type="submit">Test auth-verify</button>
+        </form>
+        <pre id="auth-verify-response">Response will appear here...</pre>
+    </div>
+
+    <!-- Ticket Manager -->
+    <div class="endpoint">
+        <h2>ticket-manager <span class="method post">POST</span></h2>
+        <p class="note">Mints a new ticket for a user for a specific event. This is performed by the admin wallet.</p>
+        <form id="ticket-manager-form">
+            <label for="tm-event-id">Event ID:</label>
+            <input type="text" id="tm-event-id" value="1">
+            <label for="tm-user-wallet">User Wallet:</label>
+            <input type="text" id="tm-user-wallet" placeholder="0x...">
+            <button type="submit">Test ticket-manager</button>
+        </form>
+        <pre id="ticket-manager-response">Response will appear here...</pre>
+    </div>
+
+    <!-- Checkin -->
+    <div class="endpoint">
+        <h2>checkin <span class="method post">POST</span></h2>
+        <p class="note">Checks a user in for an event by validating their ticket on-chain.</p>
+        <form id="checkin-form">
+            <label for="checkin-ticket-id">Ticket ID (from DB):</label>
+            <input type="text" id="checkin-ticket-id" placeholder="The UUID of the ticket in your database">
+            <label for="checkin-user-wallet">User Wallet:</label>
+            <input type="text" id="checkin-user-wallet" placeholder="0x...">
+            <button type="submit">Test checkin</button>
+        </form>
+        <pre id="checkin-response">Response will appear here...</pre>
+    </div>
+
+    <!-- Event Manager -->
+    <div class="endpoint">
+        <h2>event-manager <span class="method post">POST</span> / <span class="method put">PUT</span></h2>
+        <p class="note">Requires authentication. Create or update an event. You must be an organizer.</p>
+        <label for="em-auth-jwt">Auth JWT:</label>
+        <textarea id="em-auth-jwt" rows="3" placeholder="Paste the JWT from a successful auth-verify call here"></textarea>
+        
+        <form id="event-manager-create-form">
+            <h3>Create Event <span class="method post">POST</span></h3>
+            <label for="emc-name">Name:</label>
+            <input type="text" id="emc-name" value="My Awesome Concert">
+            <label for="emc-description">Description:</label>
+            <input type="text" id="emc-description" value="The best concert ever.">
+            <label for="emc-date">Date:</label>
+            <input type="text" id="emc-date" value="2025-12-25T20:00:00Z">
+            <label for="emc-location">Location:</label>
+            <input type="text" id="emc-location" value="The Moon">
+            <label for="emc-total-tickets">Total Tickets:</label>
+            <input type="number" id="emc-total-tickets" value="100">
+            <label for="emc-image-url">Image URL:</label>
+            <input type="text" id="emc-image-url" placeholder="https://example.com/image.png">
+            <button type="submit">Test Create Event</button>
+        </form>
+        <pre id="event-manager-create-response">Response will appear here...</pre>
+
+        <form id="event-manager-update-form" style="margin-top: 20px;">
+            <h3>Update Event <span class="method put">PUT</span></h3>
+            <label for="emu-event-id">Event ID to Update:</label>
+            <input type="text" id="emu-event-id" placeholder="1">
+            <label for="emu-name">New Name:</label>
+            <input type="text" id="emu-name" placeholder="My Even More Awesome Concert">
+            <button type="submit">Test Update Event</button>
+        </form>
+        <pre id="event-manager-update-response">Response will appear here...</pre>
+    </div>
+
+    <!-- Marketplace -->
+    <div class="endpoint">
+        <h2>marketplace <span class="method post">POST</span></h2>
+        <p class="note">Handles marketplace actions like listing, un-listing, and recording sales.</p>
+        
+        <form id="marketplace-create-form">
+            <h3>Create Listing</h3>
+            <label for="mpc-token-id">Token ID:</label>
+            <input type="text" id="mpc-token-id" placeholder="e.g., 1">
+            <label for="mpc-price">Price (in wei):</label>
+            <input type="text" id="mpc-price" placeholder="e.g., 10000000000000000">
+            <label for="mpc-seller-wallet">Seller Wallet:</label>
+            <input type="text" id="mpc-seller-wallet" placeholder="0x...">
+            <button type="submit">Test Create Listing</button>
+        </form>
+        <pre id="marketplace-create-response">Response will appear here...</pre>
+
+        <form id="marketplace-cancel-form" style="margin-top: 20px;">
+            <h3>Cancel Listing</h3>
+            <label for="mpcan-listing-id">Listing ID (from DB):</label>
+            <input type="text" id="mpcan-listing-id" placeholder="The UUID of the listing">
+            <label for="mpcan-seller-wallet">Seller Wallet:</label>
+            <input type="text" id="mpcan-seller-wallet" placeholder="0x...">
+            <button type="submit">Test Cancel Listing</button>
+        </form>
+        <pre id="marketplace-cancel-response">Response will appear here...</pre>
+
+        <form id="marketplace-sale-form" style="margin-top: 20px;">
+            <h3>Record Sale</h3>
+            <label for="mpr-token-id">Token ID:</label>
+            <input type="text" id="mpr-token-id" placeholder="e.g., 1">
+            <label for="mpr-buyer-wallet">Buyer Wallet:</label>
+            <input type="text" id="mpr-buyer-wallet" placeholder="0x...">
+            <label for="mpr-tx-hash">Transaction Hash:</label>
+            <input type="text" id="mpr-tx-hash" placeholder="0x...">
+            <button type="submit">Test Record Sale</button>
+        </form>
+        <pre id="marketplace-sale-response">Response will appear here...</pre>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://xuqswkwbgaoilulgllbu.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1cXN3a3diZ2FvaWx1bGdsbGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNzg0MjksImV4cCI6MjA3ODg1NDQyOX0.F89y2I5j26jbP5af6sIMxEqu1WMzcEeyYGFJeEs9YQs";
+
+        async function handleFormSubmit(event, functionName, responseElementId, getBody, getHeaders = () => ({})) {
+            event.preventDefault();
+            const responseEl = document.getElementById(responseElementId);
+            responseEl.textContent = 'Loading...';
+
+            try {
+                const body = getBody();
+                const headers = {
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    'Content-Type': 'application/json',
+                    ...getHeaders()
+                };
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+                    method: 'POST', // Defaulting to POST for most, PUT is handled via headers if needed
+                    headers: headers,
+                    body: JSON.stringify(body),
+                });
+                
+                if (event.target.id.includes('update')) { // Special handling for PUT
+                     const updateResponse = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+                        method: 'PUT',
+                        headers: headers,
+                        body: JSON.stringify(body),
+                    });
+                    responseEl.textContent = `Status: ${updateResponse.status}\n\n${JSON.stringify(await updateResponse.json(), null, 2)}`;
+                } else {
+                    responseEl.textContent = `Status: ${response.status}\n\n${JSON.stringify(await response.json(), null, 2)}`;
+                }
+
+            } catch (error) {
+                responseEl.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Auth Verify
+        document.getElementById('auth-verify-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'auth-verify', 'auth-verify-response', () => ({
+                message: document.getElementById('auth-message').value,
+                signature: document.getElementById('auth-signature').value,
+                address: document.getElementById('auth-address').value,
+            }));
+        });
+
+        // Ticket Manager
+        document.getElementById('ticket-manager-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'ticket-manager', 'ticket-manager-response', () => ({
+                event_id: document.getElementById('tm-event-id').value,
+                user_wallet: document.getElementById('tm-user-wallet').value,
+            }));
+        });
+
+        // Checkin
+        document.getElementById('checkin-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'checkin', 'checkin-response', () => ({
+                ticket_id: document.getElementById('checkin-ticket-id').value,
+                user_wallet: document.getElementById('checkin-user-wallet').value,
+            }));
+        });
+
+        // Event Manager - Create
+        document.getElementById('event-manager-create-form').addEventListener('submit', (e) => {
+            const jwt = document.getElementById('em-auth-jwt').value;
+            if (!jwt) { alert('Auth JWT is required for Event Manager functions.'); return; }
+            handleFormSubmit(e, 'event-manager', 'event-manager-create-response', () => ({
+                name: document.getElementById('emc-name').value,
+                description: document.getElementById('emc-description').value,
+                date: document.getElementById('emc-date').value,
+                location: document.getElementById('emc-location').value,
+                total_tickets: parseInt(document.getElementById('emc-total-tickets').value),
+                image_url: document.getElementById('emc-image-url').value,
+            }), () => ({ 'Authorization': `Bearer ${jwt}` }));
+        });
+
+        // Event Manager - Update
+        document.getElementById('event-manager-update-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const jwt = document.getElementById('em-auth-jwt').value;
+            if (!jwt) { alert('Auth JWT is required for Event Manager functions.'); return; }
+            const responseEl = document.getElementById('event-manager-update-response');
+            responseEl.textContent = 'Loading...';
+            try {
+                const body = {
+                    event_id: document.getElementById('emu-event-id').value,
+                    name: document.getElementById('emu-name').value,
+                };
+                const headers = { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' };
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/event-manager`, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(body),
+                });
+                responseEl.textContent = `Status: ${response.status}\n\n${JSON.stringify(await response.json(), null, 2)}`;
+            } catch (error) {
+                responseEl.textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Marketplace - Create
+        document.getElementById('marketplace-create-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'marketplace', 'marketplace-create-response', () => ({
+                action: 'create_listing',
+                payload: {
+                    token_id: document.getElementById('mpc-token-id').value,
+                    price: document.getElementById('mpc-price').value,
+                    seller_wallet: document.getElementById('mpc-seller-wallet').value,
+                }
+            }));
+        });
+
+        // Marketplace - Cancel
+        document.getElementById('marketplace-cancel-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'marketplace', 'marketplace-cancel-response', () => ({
+                action: 'cancel_listing',
+                payload: {
+                    listing_id: document.getElementById('mpcan-listing-id').value,
+                    seller_wallet: document.getElementById('mpcan-seller-wallet').value,
+                }
+            }));
+        });
+
+        // Marketplace - Record Sale
+        document.getElementById('marketplace-sale-form').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'marketplace', 'marketplace-sale-response', () => ({
+                action: 'record_sale',
+                payload: {
+                    token_id: document.getElementById('mpr-token-id').value,
+                    buyer_wallet: document.getElementById('mpr-buyer-wallet').value,
+                    tx_hash: document.getElementById('mpr-tx-hash').value,
+                }
+            }));
+        });
+
+    </script>
+</body>
+</html>

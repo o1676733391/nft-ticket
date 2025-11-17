@@ -1,0 +1,13 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0x8adD44EB934C49A931cF7B36f92Fe1FDffe7a5D5",
+  "trustedForwarder": "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
+  "gaslessEnabled": true,
+  "timestamp": "2025-11-17T17:18:14.732Z",
+  "contracts": {
+    "SystemToken": "0xe09D1b84652FFf494Ad87934A13D39395e0767F3",
+    "TicketNFT": "0x66CAE4d070C2A6b8d469fE3538414c72C4FA41B6",
+    "Marketplace": "0x47F402Cc8196dBD8A9F7D61dFACC1de84a4e66Bd"
+  }
+}

@@ -3,12 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
 /**
  * @title SystemToken
  * @dev Token riêng của hệ thống để thanh toán vé
+ * @dev Supports ERC-2771 for gasless transactions via Account Abstraction
  */
-contract SystemToken is ERC20, Ownable {
+contract SystemToken is ERC2771Context, ERC20, Ownable {
     // Decimals mặc định là 18
     
     event TokensMinted(address indexed to, uint256 amount);
@@ -17,9 +19,9 @@ contract SystemToken is ERC20, Ownable {
     constructor(
         string memory name,
         string memory symbol,
-        uint256 initialSupply
-    ) ERC20(name, symbol) Ownable(msg.sender) {
-        _mint(msg.sender, initialSupply * 10**decimals());
+        address trustedForwarder
+    ) ERC2771Context(trustedForwarder) ERC20(name, symbol) Ownable() {
+        _mint(msg.sender, 1000000 * 10**decimals());
     }
 
     /**
@@ -43,7 +45,29 @@ contract SystemToken is ERC20, Ownable {
      */
     function faucet(uint256 amount) external {
         require(amount <= 1000 * 10**decimals(), "Maximum 1000 tokens per claim");
-        _mint(msg.sender, amount);
-        emit TokensMinted(msg.sender, amount);
+        _mint(_msgSender(), amount);
+        emit TokensMinted(_msgSender(), amount);
+    }
+
+    /**
+     * @dev Override _msgSender to support ERC-2771 (gasless transactions)
+     */
+    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) {
+        return ERC2771Context._msgSender();
+    }
+
+    /**
+     * @dev Override _msgData to support ERC-2771
+     */
+    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /**
+     * @dev Override _contextSuffixLength for ERC-2771
+     */
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        // Custom logic for _contextSuffixLength
+        return 0; // Example return value
     }
 }
