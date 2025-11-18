@@ -6,12 +6,14 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
 /**
  * @title TicketNFT
  * @dev NFT ticket với khả năng soulbound (không thể transfer) và royalty
+ * @dev Supports ERC-2771 for gasless transactions via Account Abstraction
  */
-contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl {
+contract TicketNFT is ERC2771Context, ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl {
     using Counters for Counters.Counter;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -46,9 +48,11 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
     event EventCreated(uint256 indexed eventId, address indexed organizer, string name);
     event TransferLocked(uint256 indexed tokenId, bool locked);
 
-    constructor() ERC721("NFT Ticket", "NFTT") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, msg.sender);
+    constructor(
+        address trustedForwarder
+    ) ERC721("NFT Ticket", "NFTT") ERC2771Context(trustedForwarder) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(MINTER_ROLE, _msgSender());
     }
 
     /**
@@ -64,13 +68,13 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
 
         events[eventId] = EventInfo({
             name: name,
-            organizer: msg.sender,
+            organizer: _msgSender(),
             royaltyFee: royaltyFee,
             isActive: true
         });
 
-        _grantRole(ORGANIZER_ROLE, msg.sender);
-        emit EventCreated(eventId, msg.sender, name);
+        _grantRole(ORGANIZER_ROLE, _msgSender());
+        emit EventCreated(eventId, _msgSender(), name);
     }
 
     /**
@@ -82,7 +86,7 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
         uint256 templateId,
         string memory uri,
         bool isSoulbound
-    ) external onlyRole(MINTER_ROLE) returns (uint256) {
+    ) public onlyRole(MINTER_ROLE) returns (uint256) {
         require(events[eventId].isActive, "Event not active");
 
         uint256 tokenId = _tokenIdCounter.current();
@@ -133,8 +137,8 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
         require(_exists(tokenId), "Token does not exist");
         require(!tickets[tokenId].isCheckedIn, "Already checked in");
         require(
-            msg.sender == tickets[tokenId].organizer || 
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            _msgSender() == tickets[tokenId].organizer || 
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Not authorized"
         );
 
@@ -148,8 +152,8 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
     function setTransferLock(uint256 tokenId, bool locked) external {
         require(_exists(tokenId), "Token does not exist");
         require(
-            msg.sender == tickets[tokenId].organizer || 
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            _msgSender() == tickets[tokenId].organizer || 
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Not authorized"
         );
 
@@ -225,5 +229,27 @@ contract TicketNFT is ERC721, ERC721URIStorage, ERC721Enumerable, AccessControl 
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    /**
+     * @dev Override _msgSender to support ERC-2771 (gasless transactions)
+     */
+    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) {
+        return ERC2771Context._msgSender();
+    }
+
+    /**
+     * @dev Override _msgData to support ERC-2771
+     */
+    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /**
+     * @dev Override _contextSuffixLength for ERC-2771
+     */
+    function _contextSuffixLength() internal view virtual returns (uint256) {
+        // Custom logic for _contextSuffixLength
+        return 0; // Example return value
     }
 }
