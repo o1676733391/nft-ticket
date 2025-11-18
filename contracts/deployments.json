@@ -4,10 +4,10 @@
   "deployer": "0x8adD44EB934C49A931cF7B36f92Fe1FDffe7a5D5",
   "trustedForwarder": "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
   "gaslessEnabled": true,
-  "timestamp": "2025-11-17T17:18:14.732Z",
+  "timestamp": "2025-11-17T23:08:27.052Z",
   "contracts": {
-    "SystemToken": "0xe09D1b84652FFf494Ad87934A13D39395e0767F3",
-    "TicketNFT": "0x66CAE4d070C2A6b8d469fE3538414c72C4FA41B6",
-    "Marketplace": "0x47F402Cc8196dBD8A9F7D61dFACC1de84a4e66Bd"
+    "SystemToken": "0x01aD22Fed0c542d15857d14Fc227971933257534",
+    "TicketNFT": "0x7e041f70a57201b8bAB2194c0f3CA7d1e5853F11",
+    "Marketplace": "0xDDF51a2120B950531B17265D5F2baBC62788eC7E"
   }
 }

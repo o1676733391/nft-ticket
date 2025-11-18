@@ -14,7 +14,9 @@ const supabase = createClient(
 // Viem client
 const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http(process.env.RPC_URL),
+  transport: http(process.env.RPC_URL, {
+    timeout: 30_000, // 30 seconds timeout
+  }),
 })
 
 // Contract addresses
@@ -34,6 +36,7 @@ const MARKETPLACE_ABI = [
   'event Sold(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price)',
 ] as const;
 
+const MAX_BLOCK_RANGE = BigInt(49000); // Set a safe limit for RPC requests
 
 // Last processed block (store in Supabase or file)
 let lastProcessedBlock = BigInt(0)
@@ -42,20 +45,31 @@ let lastProcessedBlock = BigInt(0)
  * Main indexer function
  */
 async function startIndexer() {
-  console.log('🚀 Starting NFT Ticket Indexer...')
-  
-  // Load last processed block from storage
-  await loadLastProcessedBlock()
-  
-  // Start listening to new blocks
-  const unwatch = publicClient.watchBlocks({
-    onBlock: async (block) => {
-      console.log(`📦 New block: ${block.number}`)
-      await processBlock(block.number!)
-    },
-  })
+  console.log('🚀 Starting NFT Ticket Indexer...');
 
-  console.log('✅ Indexer running...')
+  // 1. Load the last block we processed
+  await loadLastProcessedBlock();
+
+  // 2. Sync any blocks that were missed while the indexer was offline
+  const currentBlock = await publicClient.getBlockNumber();
+  if (currentBlock > lastProcessedBlock) {
+    await syncHistoricalBlocks(lastProcessedBlock + BigInt(1), currentBlock);
+  }
+
+  // 3. Start watching for new blocks *after* historical sync is complete
+  publicClient.watchBlocks({
+    onBlock: async (block) => {
+      if (block.number && block.number > lastProcessedBlock) {
+        console.log(`📦 New block: ${block.number}`);
+        await processBlock(block.number);
+      }
+    },
+    // This will help in case of a short disconnection
+    poll: true,
+    pollingInterval: 4000, 
+  });
+
+  console.log('✅ Indexer is running and watching for new blocks...');
 }
 
 /**
@@ -102,35 +116,56 @@ async function saveLastProcessedBlock(blockNumber: bigint) {
 }
 
 /**
- * Process a single block
+ * Process a range of blocks, fetching logs in chunks.
+ */
+async function processBlockRange(fromBlock: bigint, toBlock: bigint) {
+    if (toBlock < fromBlock) {
+        return;
+    }
+
+    console.log(`Processing blocks from ${fromBlock} to ${toBlock}`);
+
+    try {
+        for (let currentFrom = fromBlock; currentFrom <= toBlock; currentFrom += MAX_BLOCK_RANGE + BigInt(1)) {
+            const currentTo = (currentFrom + MAX_BLOCK_RANGE > toBlock) ? toBlock : currentFrom + MAX_BLOCK_RANGE;
+
+            console.log(`  Fetching logs from block ${currentFrom} to ${currentTo}`);
+
+            const logs = await publicClient.getLogs({
+                address: [TICKET_NFT_ADDRESS, MARKETPLACE_ADDRESS],
+                fromBlock: currentFrom,
+                toBlock: currentTo,
+            });
+
+            if (logs.length > 0) {
+                console.log(`  🔍 Found ${logs.length} events in this range.`);
+                for (const log of logs) {
+                    await processLog(log);
+                }
+            }
+            // Save progress after each chunk
+            await saveLastProcessedBlock(currentTo);
+            console.log(`  ✅ Progress saved up to block ${currentTo}`);
+
+            // Add a small delay to avoid overwhelming the RPC
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
+
+        console.log(`✅ Finished processing up to block ${toBlock}`);
+
+    } catch (error) {
+        console.error(`Error processing blocks from ${fromBlock} to ${toBlock}:`, error);
+    }
+}
+
+/**
+ * Process a single new block.
  */
 async function processBlock(blockNumber: bigint) {
   if (blockNumber <= lastProcessedBlock) {
-    return // Already processed
+    return; // Already processed
   }
-
-  try {
-    // Fetch logs for all events from both contracts
-    const logs = await publicClient.getLogs({
-      address: [TICKET_NFT_ADDRESS, MARKETPLACE_ADDRESS],
-      fromBlock: lastProcessedBlock + BigInt(1),
-      toBlock: blockNumber,
-    })
-
-    if (logs.length > 0) {
-      console.log(`🔍 Found ${logs.length} events in block ${blockNumber}`)
-      
-      // Process each log
-      for (const log of logs) {
-        await processLog(log)
-      }
-    }
-
-    // Save progress
-    await saveLastProcessedBlock(blockNumber)
-  } catch (error) {
-    console.error(`Error processing block ${blockNumber}:`, error)
-  }
+  await processBlockRange(lastProcessedBlock + BigInt(1), blockNumber);
 }
 
 /**
@@ -155,57 +190,99 @@ async function processLog(log: Log) {
  */
 async function processTicketNFTEvent(log: Log) {
   try {
-    const decodedEvent = decodeEventLog({
+    // decodeEventLog's types can be permissive; cast to any and guard at runtime
+    const decodedEventAny: any = decodeEventLog({
       abi: TICKET_NFT_ABI,
       data: log.data,
       topics: log.topics,
-    });
+    })
 
-    const { eventName, args } = decodedEvent;
+    const eventName: string | undefined = decodedEventAny?.eventName
+    const args: any = decodedEventAny?.args
+
+    if (!eventName || !args) return
 
     switch (eventName) {
       case 'TicketMinted': {
-        const { tokenId, eventId, owner } = args;
-        console.log(`🎫 Ticket Minted: tokenId=${tokenId}, eventId=${eventId}, owner=${owner}`);
-        await supabase
+        // args may be an array or an object with named keys depending on decoder
+        const tokenId = (args.tokenId ?? args[0])
+        const eventIdOnChain = (args.eventId ?? args[1])
+        const owner = (args.owner ?? args[2])
+
+        if (tokenId == null) return
+
+        console.log(`🎫 Ticket Minted: tokenId=${tokenId}, eventIdOnChain=${eventIdOnChain}, owner=${owner}`)
+
+        // Find the event UUID from the on-chain event ID
+        const { data: eventData, error: eventError } = await supabase
+          .from('events')
+          .select('id')
+          .eq('event_id_onchain', eventIdOnChain?.toString())
+          .single()
+
+        if (eventError || !eventData) {
+          console.error(`❌ Event with on-chain ID ${eventIdOnChain} not found in database`)
+          return
+        }
+
+        const { error: insertError } = await supabase
           .from('tickets')
           .upsert({
             token_id: tokenId.toString(),
-            event_id: eventId.toString(),
-            owner_wallet: owner.toLowerCase(),
+            event_id: eventData.id, // Use the UUID from database
+            owner_wallet: owner?.toLowerCase(),
+            original_owner: owner?.toLowerCase(),
             tx_hash: log.transactionHash,
             status: 'minted',
-          }, { onConflict: 'token_id' });
-        break;
+            minted_at: new Date().toISOString(),
+          }, { onConflict: 'token_id' })
+
+        if (insertError) {
+          console.error(`❌ Failed to insert ticket: ${insertError.message}`)
+        } else {
+          console.log(`✅ Inserted ticket ${tokenId} into database`)
+        }
+        break
       }
+
       case 'Transfer': {
-        const { from, to, tokenId } = args;
-        if (from === '0x0000000000000000000000000000000000000000') return; // Skip mint
-        console.log(`🔄 Transfer: tokenId=${tokenId}, from=${from}, to=${to}`);
+        const from = (args.from ?? args[0])
+        const to = (args.to ?? args[1])
+        const tokenId = (args.tokenId ?? args[2])
+
+        if (!tokenId) return
+        if (from === '0x0000000000000000000000000000000000000000') return // Skip mint
+
+        console.log(`🔄 Transfer: tokenId=${tokenId}, from=${from}, to=${to}`)
+
         await supabase
           .from('tickets')
-          .update({ owner_wallet: to.toLowerCase(), status: 'transferred' })
-          .eq('token_id', tokenId.toString());
+          .update({ owner_wallet: (to as string).toLowerCase(), status: 'transferred' })
+          .eq('token_id', tokenId.toString())
+
         await supabase
           .from('transactions')
           .insert({
             token_id: tokenId.toString(),
             type: 'transfer',
-            from_wallet: from.toLowerCase(),
-            to_wallet: to.toLowerCase(),
+            from_wallet: (from as string).toLowerCase(),
+            to_wallet: (to as string).toLowerCase(),
             tx_hash: log.transactionHash,
             block_number: log.blockNumber?.toString(),
-          });
-        break;
+          })
+
+        break
       }
+
       case 'TicketCheckedIn': {
-        const { tokenId } = args;
-        console.log(`✅ Ticket Checked In: tokenId=${tokenId}`);
+        const tokenId = (args.tokenId ?? args[0])
+        if (!tokenId) return
+        console.log(`✅ Ticket Checked In: tokenId=${tokenId}`)
         await supabase
           .from('tickets')
           .update({ is_checked_in: true, checked_in_at: new Date().toISOString() })
-          .eq('token_id', tokenId.toString());
-        break;
+          .eq('token_id', tokenId.toString())
+        break
       }
     }
   } catch (err) {
@@ -218,59 +295,68 @@ async function processTicketNFTEvent(log: Log) {
  */
 async function processMarketplaceEvent(log: Log) {
   try {
-    const decodedEvent = decodeEventLog({
+    const decodedAny: any = decodeEventLog({
       abi: MARKETPLACE_ABI,
       data: log.data,
       topics: log.topics,
     });
 
-    const { eventName, args } = decodedEvent;
+    const eventName: string | undefined = decodedAny?.eventName;
+    const args: any = decodedAny?.args;
+    if (!eventName || !args) return;
 
     switch (eventName) {
       case 'Listed': {
-        const { tokenId, seller, price } = args;
-        console.log(`📝 Listing Created: tokenId=${tokenId}, seller=${seller}, price=${price}`);
+        const tokenId = (args.tokenId ?? args[0])
+        const seller = (args.seller ?? args[1])
+        const price = (args.price ?? args[2])
+        if (!tokenId) return
+        console.log(`📝 Listing Created: tokenId=${tokenId}, seller=${seller}, price=${price}`)
         await supabase
           .from('tickets')
           .update({ status: 'listed' })
-          .eq('token_id', tokenId.toString());
-        // You might want to create a new entry in a 'listings' table here
-        break;
+          .eq('token_id', tokenId.toString())
+        break
       }
       case 'Unlisted': {
-        const { tokenId } = args;
-        console.log(`❌ Listing Cancelled: tokenId=${tokenId}`);
+        const tokenId = (args.tokenId ?? args[0])
+        if (!tokenId) return
+        console.log(`❌ Listing Cancelled: tokenId=${tokenId}`)
         await supabase
           .from('marketplace_listings')
           .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
           .eq('token_id', tokenId.toString())
-          .eq('status', 'active');
+          .eq('status', 'active')
         await supabase
           .from('tickets')
           .update({ status: 'minted' })
-          .eq('token_id', tokenId.toString());
-        break;
+          .eq('token_id', tokenId.toString())
+        break
       }
       case 'Sold': {
-        const { tokenId, seller, buyer, price } = args;
-        console.log(`💰 Sale Completed: tokenId=${tokenId}, buyer=${buyer}, price=${price}`);
+        const tokenId = (args.tokenId ?? args[0])
+        const seller = (args.seller ?? args[1])
+        const buyer = (args.buyer ?? args[2])
+        const price = (args.price ?? args[3])
+        if (!tokenId) return
+        console.log(`💰 Sale Completed: tokenId=${tokenId}, buyer=${buyer}, price=${price}`)
         await supabase
           .from('marketplace_listings')
           .update({
             status: 'sold',
-            buyer_wallet: buyer.toLowerCase(),
+            buyer_wallet: (buyer as string).toLowerCase(),
             sold_at: new Date().toISOString(),
           })
           .eq('token_id', tokenId.toString())
-          .eq('status', 'active');
+          .eq('status', 'active')
         await supabase
           .from('tickets')
           .update({
-            owner_wallet: buyer.toLowerCase(),
+            owner_wallet: (buyer as string).toLowerCase(),
             status: 'sold',
           })
-          .eq('token_id', tokenId.toString());
-        break;
+          .eq('token_id', tokenId.toString())
+        break
       }
     }
   } catch (err) {
@@ -282,24 +368,9 @@ async function processMarketplaceEvent(log: Log) {
  * Catch up on missed blocks (historical sync)
  */
 async function syncHistoricalBlocks(fromBlock: bigint, toBlock: bigint) {
-  console.log(`📚 Syncing historical blocks from ${fromBlock} to ${toBlock}`)
-  
-  const batchSize = BigInt(1000)
-  let currentBlock = fromBlock
-
-  while (currentBlock < toBlock) {
-    const endBlock = currentBlock + batchSize > toBlock ? toBlock : currentBlock + batchSize
-    
-    console.log(`Processing blocks ${currentBlock} to ${endBlock}`)
-    await processBlock(endBlock)
-    
-    currentBlock = endBlock + BigInt(1)
-    
-    // Small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000))
-  }
-
-  console.log('✅ Historical sync complete')
+  console.log(`📚 Syncing historical blocks from ${fromBlock} to ${toBlock}`);
+  await processBlockRange(fromBlock, toBlock);
+  console.log('✅ Historical sync complete');
 }
 
 // Start the indexer

@@ -24,7 +24,7 @@ authRouter.post('/verify', async (req, res) => {
         // 2. Find or create user in Supabase
         let { data: user, error: userError } = await supabase
             .from('users')
-            .select('*')
+            .select('id, wallet_address')
             .eq('wallet_address', address.toLowerCase())
             .single();
 
@@ -36,31 +36,50 @@ authRouter.post('/verify', async (req, res) => {
             const { data: newUser, error: createError } = await supabase
                 .from('users')
                 .insert([{ wallet_address: address.toLowerCase() }])
-                .select()
+                .select('id, wallet_address')
                 .single();
             if (createError) throw createError;
             user = newUser;
         }
 
-        // 3. Generate a Supabase JWT for the user
-        // This requires creating a temporary email and using the admin client
-        const { data: tokenData, error: tokenError } = await supabase.auth.admin.generateLink({
+        // 3. Generate a Supabase JWT for the user using a magic link.
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
             type: 'magiclink',
             email: `${user.id}@temp.wallet`, // Create a fake email for wallet-based auth
         });
 
-        if (tokenError) throw tokenError;
+        if (linkError) throw linkError;
 
-        // The token is in the properties of the response
-        const accessToken = tokenData.properties?.access_token;
-        if (!accessToken) {
-            throw new Error("Could not extract access token from Supabase response.");
+        // The generateLink response contains an action_link with a token hash.
+        // We need to extract this token and exchange it for a session.
+        const actionLink = linkData.properties.action_link;
+        const url = new URL(actionLink);
+        const token_hash = url.searchParams.get('token');
+
+        if (!token_hash) {
+            return res.status(500).json({ error: 'Could not extract token from action link.' });
+        }
+
+        // Exchange the token hash for a valid session
+        const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+            type: 'magiclink',
+            token_hash: token_hash,
+        });
+
+        if (sessionError) {
+            console.error('Error verifying OTP:', sessionError);
+            return res.status(500).json({ error: sessionError.message });
+        }
+
+        if (!sessionData.session) {
+            return res.status(500).json({ error: 'Could not create a session.' });
         }
 
         res.status(200).json({
             message: 'Authentication successful.',
-            user,
-            token: accessToken,
+            user: user, // Return the user from 'users' table, not auth.users
+            token: sessionData.session.access_token,
+            auth_user: sessionData.user, // Optional: include auth user for debugging
         });
 
     } catch (error: any) {

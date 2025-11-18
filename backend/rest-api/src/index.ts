@@ -4,8 +4,8 @@ import cors from 'cors';
 import { authRouter } from './routes/auth';
 import { ticketRouter } from './routes/tickets';
 import { eventRouter } from './routes/events';
-import { marketplaceRouter } from './routes/marketplace';
-import { checkinRouter } from './routes/checkin';
+import marketplaceRouter from './routes/marketplace';
+import checkinRouter from './routes/checkin';
 
 dotenv.config();
 

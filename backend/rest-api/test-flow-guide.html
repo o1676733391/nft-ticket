@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Ticketing - Complete Test Flow</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.6; color: #333; max-width: 1000px; margin: 20px auto; 
+            padding: 0 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        h1 { color: #667eea; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .step { 
+            background: #f8f9fa; border-left: 4px solid #667eea; 
+            padding: 20px; margin-bottom: 20px; border-radius: 8px;
+            position: relative;
+        }
+        .step-number { 
+            position: absolute; top: 10px; left: -15px;
+            background: #667eea; color: white; 
+            width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+        }
+        .step h3 { margin-top: 0; color: #667eea; }
+        .step-content { margin-left: 20px; }
+        label { display: block; margin: 10px 0 5px; font-weight: 600; color: #555; }
+        input, textarea, select, button { 
+            width: 100%; padding: 10px; margin-bottom: 10px; 
+            border: 2px solid #e0e0e0; border-radius: 6px; 
+            box-sizing: border-box; font-size: 14px;
+        }
+        input:focus, textarea:focus, select:focus { border-color: #667eea; outline: none; }
+        select { 
+            background: white; 
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 30px;
+        }
+        button { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; cursor: pointer; 
+            font-weight: 600; transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        pre { 
+            background: #2d2d2d; color: #f1f1f1; 
+            padding: 15px; border-radius: 6px; 
+            overflow-x: auto; max-height: 300px;
+            font-size: 12px;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { background: #e7f3ff; border-left: 4px solid #2196F3; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .wallet-info { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .saved-data { background: #d4edda; padding: 10px; border-radius: 6px; margin: 10px 0; font-family: monospace; }
+        .copy-btn { width: auto; display: inline-block; margin-left: 10px; padding: 5px 15px; font-size: 12px; }
+        .progress { background: #e0e0e0; height: 8px; border-radius: 4px; margin: 20px 0; overflow: hidden; }
+        .progress-bar { background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎫 NFT Ticketing System</h1>
+        <p class="subtitle">Complete Test Flow - From User Registration to Ticket Purchase</p>
+        
+        <div class="info">
+            <strong>📋 Complete Test Flow Overview:</strong><br>
+            1️⃣ Connect MetaMask Wallet<br>
+            2️⃣ Sign Message & Register User<br>
+            3️⃣ Create Event (with all metadata)<br>
+            4️⃣ Mint Ticket NFT (blockchain transaction)<br>
+            5️⃣ List Ticket on Marketplace<br>
+            6️⃣ Buy Ticket from Marketplace<br>
+            7️⃣ Check-in at Event Venue<br>
+            8️⃣ View System Data & Analytics<br><br>
+            <strong>⚙️ Prerequisites:</strong> MetaMask installed, REST API running (port 3001), Indexer running, Sepolia testnet ETH
+        </div>
+
+        <div class="progress">
+            <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+        </div>
+
+        <!-- STEP 1: Connect Wallet -->
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h3>🦊 Connect MetaMask Wallet</h3>
+                <p>Connect your MetaMask wallet to sign messages and interact with the blockchain.</p>
+                <button onclick="connectWallet()">Connect MetaMask</button>
+                <div id="wallet-status" class="wallet-info" style="display:none;">
+                    <strong>Connected Wallet:</strong><br>
+                    <span id="wallet-address"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('wallet-address')">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Sign Message & Register User -->
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h3>✍️ Sign Message & Register User</h3>
+                <p>Sign a message with your wallet to authenticate and create your user account.</p>
+                <button onclick="signAndRegister()" id="sign-btn" disabled>Sign & Register</button>
+                <button onclick="createTestUserDirectly()" class="copy-btn" style="margin-top: 10px;">Skip - Create Test User (Dev Only)</button>
+                <button onclick="viewAllUsers()" class="copy-btn" style="margin-top: 10px; background: #28a745;">Debug: View All Users</button>
+                <pre id="auth-response">Response will appear here...</pre>
+                <div id="user-data" class="saved-data" style="display:none;">
+                    <strong>User ID:</strong> <span id="user-id"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('user-id')">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Create Event -->
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h3>🎉 Create Event</h3>
+                <p>Create a new event as an organizer.</p>
+                
+                <label>Event Title: *</label>
+                <input type="text" id="event-title" value="Amazing Concert 2025">
+                
+                <label>Description:</label>
+                <textarea id="event-desc" rows="3">The most amazing concert of the year! Experience live music from top artists with state-of-the-art sound and lighting.</textarea>
+                
+                <label>Category: *</label>
+                <select id="event-category">
+                    <option value="concert">Concert</option>
+                    <option value="sports">Sports</option>
+                    <option value="conference">Conference</option>
+                    <option value="festival">Festival</option>
+                    <option value="theater">Theater</option>
+                    <option value="exhibition">Exhibition</option>
+                    <option value="other">Other</option>
+                </select>
+                
+                <label>Start Date (ISO 8601): *</label>
+                <input type="text" id="event-start" value="2025-12-31T20:00:00Z" placeholder="YYYY-MM-DDTHH:MM:SSZ">
+                
+                <label>End Date (ISO 8601): *</label>
+                <input type="text" id="event-end" value="2025-12-31T23:59:00Z" placeholder="YYYY-MM-DDTHH:MM:SSZ">
+                
+                <label>Location: *</label>
+                <input type="text" id="event-location" value="New York City" placeholder="City or Address">
+                
+                <label>Venue Name: *</label>
+                <input type="text" id="event-venue" value="Madison Square Garden" placeholder="Venue or Building Name">
+                
+                <label>Total Supply (Total Tickets): *</label>
+                <input type="number" id="event-supply" value="1000" min="1">
+                
+                <label>Banner URL (recommended 1920x1080):</label>
+                <input type="text" id="event-banner" placeholder="https://example.com/banner.jpg">
+                
+                <label>Thumbnail URL (recommended 600x400):</label>
+                <input type="text" id="event-thumbnail" placeholder="https://example.com/thumbnail.jpg">
+                
+                <label>Royalty Fee (basis points, 500 = 5%):</label>
+                <input type="number" id="event-royalty" value="500" min="0" max="10000" placeholder="0-10000">
+                
+                <label>Contract Address (optional - auto if minting):</label>
+                <input type="text" id="event-contract" placeholder="0x..." disabled>
+                
+                <label>
+                    <input type="checkbox" id="event-published" checked> Publish event immediately
+                </label>
+                
+                <button onclick="createNewEvent()" id="create-event-btn" disabled>Create Event</button>
+                <pre id="event-response">Response will appear here...</pre>
+                <div id="event-data" class="saved-data" style="display:none;">
+                    <strong>Event ID:</strong> <span id="event-id"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('event-id')">Copy</button><br>
+                    <strong>Event ID On-Chain:</strong> <span id="event-id-onchain"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 4: Mint Ticket -->
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h3>🎫 Mint Ticket NFT</h3>
+                <p>Mint a ticket NFT for your event (blockchain transaction).</p>
+                
+                <div class="info" style="background: #fff3cd;">
+                    <strong>⚠️ Note:</strong> This will create a blockchain transaction. Make sure you have enough Sepolia ETH for gas fees.
+                </div>
+                
+                <label>Recipient Wallet Address: *</label>
+                <input type="text" id="mint-wallet" placeholder="Will use connected wallet">
+                
+                <label>Metadata URI (optional - IPFS or storage URL):</label>
+                <input type="text" id="mint-metadata" placeholder="ipfs://... or https://...">
+                
+                <button onclick="mintTicket()" id="mint-btn" disabled>Mint Ticket (On-Chain Transaction)</button>
+                <pre id="mint-response">Response will appear here...</pre>
+                <div id="ticket-data" class="saved-data" style="display:none;">
+                    <strong>Transaction Hash:</strong> <span id="tx-hash"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('tx-hash')">Copy</button><br>
+                    <strong>Token ID:</strong> <span id="token-id"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('token-id')">Copy</button><br>
+                    <em style="color: #666; font-size: 12px;">⏳ Wait 10-30 seconds for indexer to sync, then check database</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 5: List on Marketplace -->
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h3>🏪 List Ticket on Marketplace</h3>
+                <p>List your ticket for resale on the secondary marketplace.</p>
+                
+                <label>Token ID: *</label>
+                <input type="text" id="list-token-id" placeholder="Enter token ID from Step 4">
+                
+                <label>Price (in System Token or ETH): *</label>
+                <input type="text" id="list-price" value="0.1" placeholder="0.1">
+                
+                <label>Seller Wallet (optional - defaults to connected wallet):</label>
+                <input type="text" id="list-seller" placeholder="Will use connected wallet">
+                
+                <button onclick="listTicket()" id="list-btn" disabled>List on Marketplace</button>
+                <pre id="list-response">Response will appear here...</pre>
+                <div id="listing-data" class="saved-data" style="display:none;">
+                    <strong>Listing ID:</strong> <span id="listing-id"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('listing-id')">Copy</button><br>
+                    <strong>Status:</strong> <span id="listing-status"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 6: Buy Ticket -->
+        <div class="step">
+            <div class="step-number">6</div>
+            <div class="step-content">
+                <h3>💰 Buy Ticket from Marketplace</h3>
+                <p>Purchase a listed ticket from the secondary marketplace.</p>
+                
+                <label>Token ID: *</label>
+                <input type="text" id="buy-token-id" placeholder="Enter token ID">
+                
+                <label>Buyer Wallet Address: *</label>
+                <input type="text" id="buy-buyer" placeholder="Buyer wallet address">
+                
+                <label>Payment Amount (must match listing price):</label>
+                <input type="text" id="buy-amount" placeholder="Will be fetched from listing">
+                
+                <div class="info">
+                    <strong>💡 Tip:</strong> Make sure the buyer has enough tokens/ETH to purchase the ticket plus gas fees.
+                </div>
+                
+                <button onclick="buyTicket()" id="buy-btn" disabled>Buy Ticket (Blockchain Tx)</button>
+                <pre id="buy-response">Response will appear here...</pre>
+                <div id="purchase-data" class="saved-data" style="display:none;">
+                    <strong>Transaction Hash:</strong> <span id="buy-tx-hash"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('buy-tx-hash')">Copy</button><br>
+                    <strong>New Owner:</strong> <span id="new-owner"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 7: Check-in -->
+        <div class="step">
+            <div class="step-number">7</div>
+            <div class="step-content">
+                <h3>✅ Check-in at Event</h3>
+                <p>Check-in the ticket holder at the event venue (simulates scanning QR code).</p>
+                
+                <label>Token ID: *</label>
+                <input type="text" id="checkin-token-id" placeholder="Enter token ID">
+                
+                <label>Scanner/Staff User ID (optional):</label>
+                <input type="text" id="checkin-scanner" placeholder="Leave empty for current user">
+                
+                <label>Device Info (optional - JSON):</label>
+                <input type="text" id="checkin-device" placeholder='{"device": "iPad Pro", "app_version": "1.0"}'>
+                
+                <label>Location Info (optional - JSON):</label>
+                <input type="text" id="checkin-location" placeholder='{"lat": 40.7505, "lng": -73.9934, "venue": "MSG"}'>
+                
+                <div class="info">
+                    <strong>📱 Note:</strong> In production, this would be triggered by scanning the ticket's QR code at the venue entrance.
+                </div>
+                
+                <button onclick="checkinTicket()" id="checkin-btn" disabled>Check-in Ticket</button>
+                <pre id="checkin-response">Response will appear here...</pre>
+                <div id="checkin-data" class="saved-data" style="display:none;">
+                    <strong>Check-in Time:</strong> <span id="checkin-time"></span><br>
+                    <strong>Transaction Hash:</strong> <span id="checkin-tx"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('checkin-tx')">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 8: View Results -->
+        <div class="step">
+            <div class="step-number">8</div>
+            <div class="step-content">
+                <h3>📊 View System Data</h3>
+                <p>View all events, tickets, listings, and analytics in the system.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button onclick="viewAllEvents()">📅 View All Events</button>
+                    <button onclick="viewAllTickets()">🎫 View All Tickets</button>
+                    <button onclick="viewMarketplace()">🏪 View Marketplace</button>
+                    <button onclick="viewCheckinLogs()">✅ View Check-in Logs</button>
+                    <button onclick="viewTransactions()">💳 View Transactions</button>
+                    <button onclick="viewEventStats()">📈 View Event Stats</button>
+                </div>
+                
+                <label style="margin-top: 20px;">Filter by Event ID (optional):</label>
+                <input type="text" id="view-event-filter" placeholder="Enter event ID to filter">
+                
+                <label>Filter by Wallet Address (optional):</label>
+                <input type="text" id="view-wallet-filter" placeholder="Enter wallet address">
+                
+                <pre id="events-response">Response will appear here...</pre>
+                
+                <div class="info" style="margin-top: 20px;">
+                    <strong>🔍 Database Tables:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>users - User profiles</li>
+                        <li>events - Event information</li>
+                        <li>ticket_templates - Ticket types/tiers</li>
+                        <li>tickets - NFT ticket ownership</li>
+                        <li>marketplace_listings - Secondary market</li>
+                        <li>checkin_logs - Check-in history</li>
+                        <li>transactions - Blockchain transactions</li>
+                        <li>event_analytics - Daily statistics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let provider, signer, walletAddress, userId, eventId, txHash;
+        let currentStep = 0;
+
+        function updateProgress(step) {
+            currentStep = step;
+            const progress = (step / 8) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    alert('Please install MetaMask!');
+                    return;
+                }
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                walletAddress = await signer.getAddress();
+
+                document.getElementById('wallet-address').textContent = walletAddress;
+                document.getElementById('wallet-status').style.display = 'block';
+                document.getElementById('sign-btn').disabled = false;
+                document.getElementById('mint-wallet').value = walletAddress;
+                document.getElementById('buy-buyer').value = walletAddress;
+
+                updateProgress(1);
+                showSuccess('Wallet connected successfully!');
+            } catch (error) {
+                showError('Failed to connect wallet: ' + error.message);
+            }
+        }
+
+        async function signAndRegister() {
+            try {
+                const message = "Please sign this message to authenticate with NFT Ticketing System.";
+                const signature = await signer.signMessage(message);
+
+                const response = await fetch(`${API_BASE}/api/auth/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, signature, address: walletAddress })
+                });
+
+                const data = await response.json();
+                document.getElementById('auth-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.user) {
+                    userId = data.user.id;
+                    document.getElementById('user-id').textContent = userId;
+                    document.getElementById('user-data').style.display = 'block';
+                    document.getElementById('create-event-btn').disabled = false;
+                    updateProgress(2);
+                    showSuccess('User registered successfully!');
+                } else {
+                    showError('Registration failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to sign message: ' + error.message);
+                document.getElementById('auth-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        // Dev helper: Create test user without wallet signature
+        async function createTestUserDirectly() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events/test-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                document.getElementById('auth-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.id) {
+                    userId = data.id;
+                    walletAddress = data.wallet_address;
+                    document.getElementById('user-id').textContent = userId;
+                    document.getElementById('user-data').style.display = 'block';
+                    document.getElementById('create-event-btn').disabled = false;
+                    document.getElementById('mint-wallet').value = walletAddress;
+                    document.getElementById('buy-buyer').value = walletAddress;
+                    updateProgress(2);
+                    showSuccess('Test user created! User ID: ' + userId);
+                    console.log('Created user:', { userId, walletAddress });
+                } else {
+                    showError('Test user creation failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to create test user: ' + error.message);
+                document.getElementById('auth-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function createNewEvent() {
+            try {
+                if (!userId) {
+                    showError('Please complete Step 2 first (Sign & Register or Create Test User)');
+                    return;
+                }
+
+                const body = {
+                    organizer_id: userId,
+                    title: document.getElementById('event-title').value,
+                    description: document.getElementById('event-desc').value,
+                    start_date: document.getElementById('event-start').value,
+                    end_date: document.getElementById('event-end').value,
+                    location: document.getElementById('event-location').value,
+                    venue_name: document.getElementById('event-venue').value,
+                    category: document.getElementById('event-category').value,
+                    total_supply: parseInt(document.getElementById('event-supply').value),
+                    banner_url: document.getElementById('event-banner').value || null,
+                    thumbnail_url: document.getElementById('event-thumbnail').value || null,
+                    royalty_fee: parseInt(document.getElementById('event-royalty').value) || 0,
+                    contract_address: document.getElementById('event-contract').value || null,
+                    is_published: document.getElementById('event-published').checked
+                };
+
+                console.log('Creating event with body:', body);
+
+                const response = await fetch(`${API_BASE}/api/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                document.getElementById('event-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.id) {
+                    eventId = data.id;
+                    document.getElementById('event-id').textContent = eventId;
+                    if (data.event_id_onchain) {
+                        document.getElementById('event-id-onchain').textContent = data.event_id_onchain;
+                    }
+                    document.getElementById('event-data').style.display = 'block';
+                    document.getElementById('mint-btn').disabled = false;
+                    updateProgress(3);
+                    showSuccess('Event created successfully!');
+                } else {
+                    showError('Event creation failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to create event: ' + error.message);
+                document.getElementById('event-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function mintTicket() {
+            try {
+                document.getElementById('mint-response').textContent = 'Minting ticket... Please wait for blockchain confirmation (~15-30 seconds)...';
+                
+                const body = {
+                    event_id: eventId,
+                    user_wallet: document.getElementById('mint-wallet').value || walletAddress
+                };
+
+                const response = await fetch(`${API_BASE}/api/tickets/mint`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                document.getElementById('mint-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.transactionHash) {
+                    txHash = data.transactionHash;
+                    document.getElementById('tx-hash').textContent = txHash;
+                    document.getElementById('ticket-data').style.display = 'block';
+                    document.getElementById('list-btn').disabled = false;
+                    document.getElementById('buy-btn').disabled = false;
+                    document.getElementById('checkin-btn').disabled = false;
+                    updateProgress(4);
+                    showSuccess('Ticket minted successfully! Wait for indexer to sync...');
+                    
+                    // Auto-fetch token ID after delay
+                    setTimeout(() => {
+                        alert('Check terminal logs or Supabase for the token ID generated by the indexer.');
+                    }, 5000);
+                } else {
+                    showError('Minting failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to mint ticket: ' + error.message);
+                document.getElementById('mint-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function listTicket() {
+            try {
+                const body = {
+                    tokenId: document.getElementById('list-token-id').value,
+                    price: document.getElementById('list-price').value,
+                    seller_wallet: document.getElementById('list-seller').value || walletAddress
+                };
+
+                const response = await fetch(`${API_BASE}/api/marketplace/list-ticket`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                document.getElementById('list-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    if (data.id) {
+                        document.getElementById('listing-id').textContent = data.id;
+                        document.getElementById('listing-status').textContent = data.status || 'active';
+                        document.getElementById('listing-data').style.display = 'block';
+                    }
+                    updateProgress(5);
+                    showSuccess('Ticket listed successfully!');
+                } else {
+                    showError('Listing failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to list ticket: ' + error.message);
+                document.getElementById('list-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function buyTicket() {
+            try {
+                const body = {
+                    tokenId: document.getElementById('buy-token-id').value,
+                    buyerAddress: document.getElementById('buy-buyer').value,
+                    amount: document.getElementById('buy-amount').value || undefined
+                };
+
+                const response = await fetch(`${API_BASE}/api/marketplace/buy-ticket`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                document.getElementById('buy-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    if (data.transactionHash) {
+                        document.getElementById('buy-tx-hash').textContent = data.transactionHash;
+                        document.getElementById('new-owner').textContent = body.buyerAddress;
+                        document.getElementById('purchase-data').style.display = 'block';
+                    }
+                    updateProgress(6);
+                    showSuccess('Ticket purchased successfully!');
+                } else {
+                    showError('Purchase failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to buy ticket: ' + error.message);
+                document.getElementById('buy-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function checkinTicket() {
+            try {
+                const deviceInfo = document.getElementById('checkin-device').value;
+                const locationInfo = document.getElementById('checkin-location').value;
+                
+                const body = {
+                    tokenId: document.getElementById('checkin-token-id').value,
+                    scanned_by: document.getElementById('checkin-scanner').value || userId,
+                    device_info: deviceInfo ? JSON.parse(deviceInfo) : undefined,
+                    location_info: locationInfo ? JSON.parse(locationInfo) : undefined
+                };
+
+                const response = await fetch(`${API_BASE}/api/checkin/check-in`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                document.getElementById('checkin-response').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok) {
+                    if (data.timestamp || data.checked_in_at) {
+                        document.getElementById('checkin-time').textContent = data.timestamp || data.checked_in_at;
+                        if (data.transactionHash) {
+                            document.getElementById('checkin-tx').textContent = data.transactionHash;
+                        }
+                        document.getElementById('checkin-data').style.display = 'block';
+                    }
+                    updateProgress(7);
+                    showSuccess('Check-in successful!');
+                } else {
+                    showError('Check-in failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                showError('Failed to check-in: ' + error.message);
+                document.getElementById('checkin-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewAllEvents() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events`);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== ALL EVENTS ===\n' + JSON.stringify(data, null, 2);
+                updateProgress(8);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewAllTickets() {
+            try {
+                const eventFilter = document.getElementById('view-event-filter').value;
+                const walletFilter = document.getElementById('view-wallet-filter').value;
+                
+                let url = `${API_BASE}/api/tickets`;
+                const params = new URLSearchParams();
+                if (eventFilter) params.append('event_id', eventFilter);
+                if (walletFilter) params.append('owner_wallet', walletFilter);
+                if (params.toString()) url += '?' + params.toString();
+
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== ALL TICKETS ===\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewMarketplace() {
+            try {
+                const response = await fetch(`${API_BASE}/api/marketplace/listings`);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== MARKETPLACE LISTINGS ===\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewCheckinLogs() {
+            try {
+                const eventFilter = document.getElementById('view-event-filter').value;
+                let url = `${API_BASE}/api/checkin/logs`;
+                if (eventFilter) url += '?event_id=' + eventFilter;
+
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== CHECK-IN LOGS ===\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewTransactions() {
+            try {
+                const walletFilter = document.getElementById('view-wallet-filter').value;
+                let url = `${API_BASE}/api/transactions`;
+                if (walletFilter) url += '?wallet=' + walletFilter;
+
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== TRANSACTIONS ===\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewEventStats() {
+            try {
+                const eventFilter = document.getElementById('view-event-filter').value;
+                let url = `${API_BASE}/api/events/stats`;
+                if (eventFilter) url += '?event_id=' + eventFilter;
+
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('events-response').textContent = '=== EVENT STATISTICS ===\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('events-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function viewAllUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/events/users`);
+                const data = await response.json();
+                document.getElementById('auth-response').textContent = '=== ALL USERS IN DATABASE ===\n' + JSON.stringify(data, null, 2);
+                console.log('All users:', data);
+            } catch (error) {
+                document.getElementById('auth-response').textContent = 'Error fetching users: ' + error.message;
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text);
+            alert('Copied to clipboard!');
+        }
+
+        function showSuccess(message) {
+            console.log('✅', message);
+        }
+
+        function showError(message) {
+            console.error('❌', message);
+            alert('Error: ' + message);
+        }
+    </script>
+</body>
+</html>

@@ -266,12 +266,3 @@ nft-ticket/
  - `frontend/packages/mobile` — mobile app
 
  ---
-
- Nếu bạn muốn, tôi có thể:
- - Tự động thêm mẫu file `.env.example` cho từng phần (contracts, backend/indexer, frontend)
- - Tạo 1 checklist triển khai (deploy checklist) hoặc script để đẩy secrets vào Supabase bằng `supabase secrets set`
-
- Hãy cho biết bạn muốn tôi thêm mẫu `.env.example` tự động cho phần nào trước tiên.
-
- ---
- Những thay đổi đã thực hiện: tái tạo `README.md` ở root chứa hướng dẫn chi tiết triển khai env và lệnh chạy.
