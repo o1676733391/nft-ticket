@@ -19,18 +19,18 @@ async function main() {
     1: "0x84a0856b038eaAd1cC7E297cF34A7e72685A8693",        // Ethereum
     8453: "0x84a0856b038eaAd1cC7E297cF34A7e72685A8693",      // Base
     137: "0x84a0856b038eaAd1cC7E297cF34A7e72685A8693",       // Polygon
-    // Local/Hardhat - use deployer as forwarder
-    1337: deployer.address,
-    31337: deployer.address,
+    // Local/Hardhat - use zero address to disable ERC2771
+    1337: ethers.ZeroAddress,
+    31337: ethers.ZeroAddress,
   };
 
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
-  const trustedForwarder = TRUSTED_FORWARDERS[chainId] || deployer.address;
+  const trustedForwarder = TRUSTED_FORWARDERS[chainId] || ethers.ZeroAddress;
   
   console.log(`Network: ${network.name} (Chain ID: ${chainId})`);
   console.log(`Trusted Forwarder: ${trustedForwarder}`);
-  console.log(`✅ Gasless transactions ${trustedForwarder !== deployer.address ? 'ENABLED' : 'DISABLED (local network)'}\n`);
+  console.log(`✅ Gasless transactions ${trustedForwarder !== ethers.ZeroAddress ? 'ENABLED' : 'DISABLED (direct calls only)'}\n`);
 
   // 1. Deploy SystemToken
   console.log("1️⃣ Deploying SystemToken...");
@@ -79,7 +79,7 @@ async function main() {
   console.log(`SystemToken:       ${systemTokenAddress}`);
   console.log(`TicketNFT:         ${ticketNFTAddress}`);
   console.log(`Marketplace:       ${marketplaceAddress}`);
-  console.log(`Gasless Txs:       ${trustedForwarder !== deployer.address ? '✅ ENABLED' : '❌ DISABLED'}`);
+  console.log(`Gasless Txs:       ${trustedForwarder !== ethers.ZeroAddress ? '✅ ENABLED' : '❌ DISABLED'}`);
   console.log("=".repeat(70));
 
   // 6. Save to file
@@ -89,7 +89,7 @@ async function main() {
     chainId: Number(network.chainId),
     deployer: deployer.address,
     trustedForwarder: trustedForwarder,
-    gaslessEnabled: trustedForwarder !== deployer.address,
+    gaslessEnabled: trustedForwarder !== ethers.ZeroAddress,
     timestamp: new Date().toISOString(),
     contracts: {
       SystemToken: systemTokenAddress,
@@ -110,7 +110,7 @@ async function main() {
   console.log(`npx hardhat verify --network <network> ${ticketNFTAddress} ${trustedForwarder}`);
   console.log(`npx hardhat verify --network <network> ${marketplaceAddress} ${ticketNFTAddress} ${systemTokenAddress} ${trustedForwarder}`);
   
-  if (trustedForwarder !== deployer.address) {
+  if (trustedForwarder !== ethers.ZeroAddress) {
     console.log("\n🎉 Account Abstraction is ENABLED!");
     console.log("Users can now make gasless transactions!");
     console.log("Next steps:");

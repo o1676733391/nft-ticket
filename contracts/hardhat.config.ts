@@ -49,14 +49,9 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    apiKey: {
-      sepolia: process.env.ETHERSCAN_API_KEY || "",
-      polygonMumbai: process.env.ETHERSCAN_API_KEY || "",
-      mainnet: process.env.ETHERSCAN_API_KEY || "",
-      polygon: process.env.ETHERSCAN_API_KEY || "",
-      baseSepolia: process.env.ETHERSCAN_API_KEY || "", // dùng Etherscan V2
-      base: process.env.ETHERSCAN_API_KEY || "",
-    },
+    // Use the new single Etherscan API key (V2). Set ETHERSCAN_API_KEY in your environment.
+    // Deprecated per-network apiKey mapping was removed in favor of a single key.
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
     customChains: [
       {
         network: "baseSepolia",

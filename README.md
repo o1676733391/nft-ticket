@@ -1,23 +1,23 @@
-# 🎫 NFT Ticketing System
+# NFT Ticketing System
 
 Hệ thống bán vé NFT trên blockchain với marketplace, check-in, và quản lý sự kiện đầy đủ.
 
-## 📋 Tổng quan
+## Tổng quan
 
 NFT Ticketing System là một nền tảng bán vé sự kiện phi tập trung, sử dụng NFT trên blockchain để đảm bảo tính xác thực, minh bạch và khả năng giao dịch thứ cấp công bằng.
 
-### ✨ Tính năng chính
+### Tính năng chính
 
-- 🎟️ **Vé NFT**: Mỗi vé là một NFT duy nhất, chống giả mạo
-- 🏪 **Marketplace**: Mua bán vé thứ cấp với royalty tự động
-- ✅ **Check-in QR**: Quét QR code để check-in tại sự kiện
-- 👥 **Quản lý Actor**: Guest, User, Organizer, Staff
-- 🔐 **Web3 Auth**: Đăng nhập bằng ví crypto (SIWE)
-- 💰 **Token riêng**: Sử dụng token của hệ thống để thanh toán
-- 🚫 **Soulbound**: Tùy chọn khóa chuyển nhượng (chống đầu cơ)
-- 📊 **Analytics**: Theo dõi doanh số và thống kê real-time
+- **Vé NFT**: Mỗi vé là một NFT duy nhất, chống giả mạo
+- **Marketplace**: Mua bán vé thứ cấp với royalty tự động
+- **Check-in QR**: Quét QR code để check-in tại sự kiện
+- **Quản lý Actor**: Guest, User, Organizer, Staff
+- **Web3 Auth**: Đăng nhập bằng ví crypto (SIWE)
+- **Token riêng**: Sử dụng token của hệ thống để thanh toán
+- **Soulbound**: Tùy chọn khóa chuyển nhượng (chống đầu cơ)
+- **Analytics**: Theo dõi doanh số và thống kê real-time
 
-## 🏗️ Kiến trúc hệ thống
+## Kiến trúc hệ thống
 
 ```
 ┌─────────────────┐
@@ -47,7 +47,7 @@ NFT Ticketing System là một nền tảng bán vé sự kiện phi tập trung
     └────────────────────────┘
 ```
 
-## 📦 Cấu trúc Project
+## Cấu trúc Project
 
 ```
 nft-ticket/
