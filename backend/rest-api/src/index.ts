@@ -3,9 +3,11 @@ import express from 'express';
 import cors from 'cors';
 import { authRouter } from './routes/auth';
 import { ticketRouter } from './routes/tickets';
+import { ticketTemplateRouter } from './routes/ticket_templates';
 import { eventRouter } from './routes/events';
 import marketplaceRouter from './routes/marketplace';
 import checkinRouter from './routes/checkin';
+import transactionsRouter from './routes/transactions';
 
 dotenv.config();
 
@@ -23,9 +25,11 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/tickets', ticketRouter);
+app.use('/api/ticket_templates', ticketTemplateRouter);
 app.use('/api/events', eventRouter);
 app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/checkin', checkinRouter);
+app.use('/api/transactions', transactionsRouter);
 
 
 // Start Server

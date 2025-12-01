@@ -1,13 +1,13 @@
 {
-  "network": "sepolia",
-  "chainId": 11155111,
-  "deployer": "0x8adD44EB934C49A931cF7B36f92Fe1FDffe7a5D5",
-  "trustedForwarder": "0x69015912AA33720b842dCD6aC059Ed623F28d9f7",
-  "gaslessEnabled": true,
-  "timestamp": "2025-11-17T23:08:27.052Z",
+  "network": "localhost",
+  "chainId": 1337,
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "trustedForwarder": "0x0000000000000000000000000000000000000000",
+  "gaslessEnabled": false,
+  "timestamp": "2025-12-01T14:17:53.048Z",
   "contracts": {
-    "SystemToken": "0x01aD22Fed0c542d15857d14Fc227971933257534",
-    "TicketNFT": "0x7e041f70a57201b8bAB2194c0f3CA7d1e5853F11",
-    "Marketplace": "0xDDF51a2120B950531B17265D5F2baBC62788eC7E"
+    "SystemToken": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "TicketNFT": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+    "Marketplace": "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853"
   }
 }

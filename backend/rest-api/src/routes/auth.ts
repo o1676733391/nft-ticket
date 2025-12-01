@@ -1,12 +1,11 @@
 import { Router } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { verifyMessage } from 'ethers';
 import { supabase } from '../config';
 
 export const authRouter = Router();
 
 // POST /api/auth/verify
-// Verifies a signed message and returns a JWT
+// Verifies a signed message and upserts user (service role bypasses RLS)
 authRouter.post('/verify', async (req, res) => {
     const { message, signature, address } = req.body;
 
@@ -21,69 +20,38 @@ authRouter.post('/verify', async (req, res) => {
             return res.status(401).json({ error: 'Invalid signature.' });
         }
 
-        // 2. Find or create user in Supabase
-        let { data: user, error: userError } = await supabase
+        console.log('✅ Signature verified for address:', address);
+
+        // 2. Upsert user in Supabase (service role key bypasses RLS)
+        const { data: user, error: upsertError } = await supabase
             .from('users')
-            .select('id, wallet_address')
-            .eq('wallet_address', address.toLowerCase())
+            .upsert(
+                { wallet_address: address.toLowerCase() },
+                { onConflict: 'wallet_address', ignoreDuplicates: false }
+            )
+            .select('id, wallet_address, username, email, created_at')
             .single();
 
-        if (userError && userError.code !== 'PGRST116') { // PGRST116 = "Row not found"
-            throw userError;
+        if (upsertError) {
+            console.error('❌ Supabase upsert error:', upsertError);
+            return res.status(500).json({ error: 'Database error', details: upsertError });
         }
 
         if (!user) {
-            const { data: newUser, error: createError } = await supabase
-                .from('users')
-                .insert([{ wallet_address: address.toLowerCase() }])
-                .select('id, wallet_address')
-                .single();
-            if (createError) throw createError;
-            user = newUser;
+            console.error('❌ No user returned after upsert');
+            return res.status(500).json({ error: 'User creation failed' });
         }
 
-        // 3. Generate a Supabase JWT for the user using a magic link.
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'magiclink',
-            email: `${user.id}@temp.wallet`, // Create a fake email for wallet-based auth
-        });
+        console.log('✅ User upserted:', user);
 
-        if (linkError) throw linkError;
-
-        // The generateLink response contains an action_link with a token hash.
-        // We need to extract this token and exchange it for a session.
-        const actionLink = linkData.properties.action_link;
-        const url = new URL(actionLink);
-        const token_hash = url.searchParams.get('token');
-
-        if (!token_hash) {
-            return res.status(500).json({ error: 'Could not extract token from action link.' });
-        }
-
-        // Exchange the token hash for a valid session
-        const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
-            type: 'magiclink',
-            token_hash: token_hash,
-        });
-
-        if (sessionError) {
-            console.error('Error verifying OTP:', sessionError);
-            return res.status(500).json({ error: sessionError.message });
-        }
-
-        if (!sessionData.session) {
-            return res.status(500).json({ error: 'Could not create a session.' });
-        }
-
+        // 3. Return user data (no JWT needed for now — can add later if needed)
         res.status(200).json({
             message: 'Authentication successful.',
-            user: user, // Return the user from 'users' table, not auth.users
-            token: sessionData.session.access_token,
-            auth_user: sessionData.user, // Optional: include auth user for debugging
+            user: user
         });
 
     } catch (error: any) {
-        console.error("Auth error:", error);
+        console.error("❌ Auth error:", error);
         res.status(500).json({ error: 'An unexpected error occurred.', details: error.message });
     }
 });

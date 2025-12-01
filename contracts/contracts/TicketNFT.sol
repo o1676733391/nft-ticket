@@ -92,7 +92,7 @@ contract TicketNFT is ERC2771Context, ERC721, ERC721URIStorage, ERC721Enumerable
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
-        _safeMint(to, tokenId);
+        _mint(to, tokenId);
         _setTokenURI(tokenId, uri);
 
         tickets[tokenId] = TicketInfo({
@@ -234,22 +234,24 @@ contract TicketNFT is ERC2771Context, ERC721, ERC721URIStorage, ERC721Enumerable
     /**
      * @dev Override _msgSender to support ERC-2771 (gasless transactions)
      */
-    function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) {
+    function _msgSender() 
+        internal 
+        view 
+        override(Context, ERC2771Context) 
+        returns (address sender) 
+    {
         return ERC2771Context._msgSender();
     }
 
     /**
      * @dev Override _msgData to support ERC-2771
      */
-    function _msgData() internal view virtual override(Context, ERC2771Context) returns (bytes calldata) {
+    function _msgData() 
+        internal 
+        view 
+        override(Context, ERC2771Context) 
+        returns (bytes calldata) 
+    {
         return ERC2771Context._msgData();
-    }
-
-    /**
-     * @dev Override _contextSuffixLength for ERC-2771
-     */
-    function _contextSuffixLength() internal view virtual returns (uint256) {
-        // Custom logic for _contextSuffixLength
-        return 0; // Example return value
     }
 }

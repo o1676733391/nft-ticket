@@ -110,7 +110,7 @@
             <div class="step-content">
                 <h3>✍️ Sign Message & Register User</h3>
                 <p>Sign a message with your wallet to authenticate and create your user account.</p>
-                <button onclick="signAndRegister()" id="sign-btn" disabled>Sign & Register</button>
+                <button onclick="signAndRegister()" id="sign-btn">Sign & Register</button>
                 <button onclick="createTestUserDirectly()" class="copy-btn" style="margin-top: 10px;">Skip - Create Test User (Dev Only)</button>
                 <button onclick="viewAllUsers()" class="copy-btn" style="margin-top: 10px; background: #28a745;">Debug: View All Users</button>
                 <pre id="auth-response">Response will appear here...</pre>
@@ -176,7 +176,7 @@
                     <input type="checkbox" id="event-published" checked> Publish event immediately
                 </label>
                 
-                <button onclick="createNewEvent()" id="create-event-btn" disabled>Create Event</button>
+                <button onclick="createNewEvent()" id="create-event-btn">Create Event</button>
                 <pre id="event-response">Response will appear here...</pre>
                 <div id="event-data" class="saved-data" style="display:none;">
                     <strong>Event ID:</strong> <span id="event-id"></span>
@@ -203,7 +203,7 @@
                 <label>Metadata URI (optional - IPFS or storage URL):</label>
                 <input type="text" id="mint-metadata" placeholder="ipfs://... or https://...">
                 
-                <button onclick="mintTicket()" id="mint-btn" disabled>Mint Ticket (On-Chain Transaction)</button>
+                <button onclick="mintTicket()" id="mint-btn">Mint Ticket (On-Chain Transaction)</button>
                 <pre id="mint-response">Response will appear here...</pre>
                 <div id="ticket-data" class="saved-data" style="display:none;">
                     <strong>Transaction Hash:</strong> <span id="tx-hash"></span>
@@ -228,14 +228,29 @@
                 <label>Price (in System Token or ETH): *</label>
                 <input type="text" id="list-price" value="0.1" placeholder="0.1">
                 
-                <label>Seller Wallet (optional - defaults to connected wallet):</label>
-                <input type="text" id="list-seller" placeholder="Will use connected wallet">
+                <label>Seller Wallet Address: *</label>
+                <input type="text" id="list-seller" placeholder="Seller wallet address (ticket owner)">
                 
-                <button onclick="listTicket()" id="list-btn" disabled>List on Marketplace</button>
+                <label>Seller Private Key (for testing only): *</label>
+                <input type="password" id="list-seller-key" placeholder="0x..." style="font-family: monospace;">
+                <small style="color: #666; display: block; margin: -5px 0 10px 0;">
+                    ⚠️ Never share your private key! In production, users sign with MetaMask.
+                </small>
+                
+                <div class="info" style="background: #fff3cd;">
+                    <strong>💡 Quick Test Setup:</strong><br>
+                    Use Hardhat test account #1:<br>
+                    • Address: <code>0x70997970C51812dc3A010C7d01b50e0d17dc79C8</code><br>
+                    • Private Key: <code>0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d</code>
+                </div>
+                
+                <button onclick="listTicket()" id="list-btn">List on Marketplace</button>
                 <pre id="list-response">Response will appear here...</pre>
                 <div id="listing-data" class="saved-data" style="display:none;">
-                    <strong>Listing ID:</strong> <span id="listing-id"></span>
-                    <button class="copy-btn" onclick="copyToClipboard('listing-id')">Copy</button><br>
+                    <strong>Approval Tx:</strong> <span id="approval-tx"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('approval-tx')">Copy</button><br>
+                    <strong>Listing Tx:</strong> <span id="listing-tx"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('listing-tx')">Copy</button><br>
                     <strong>Status:</strong> <span id="listing-status"></span>
                 </div>
             </div>
@@ -249,22 +264,38 @@
                 <p>Purchase a listed ticket from the secondary marketplace.</p>
                 
                 <label>Token ID: *</label>
-                <input type="text" id="buy-token-id" placeholder="Enter token ID">
+                <input type="text" id="buy-token-id" placeholder="Enter token ID from listing">
                 
                 <label>Buyer Wallet Address: *</label>
                 <input type="text" id="buy-buyer" placeholder="Buyer wallet address">
                 
-                <label>Payment Amount (must match listing price):</label>
-                <input type="text" id="buy-amount" placeholder="Will be fetched from listing">
+                <label>Buyer Private Key (for testing): *</label>
+                <input type="password" id="buy-buyer-key" placeholder="0x..." style="font-family: monospace;">
+                <small style="color: #666; display: block; margin: -5px 0 10px 0;">
+                    ⚠️ Never share your private key! In production, users sign with MetaMask.
+                </small>
                 
-                <div class="info">
-                    <strong>💡 Tip:</strong> Make sure the buyer has enough tokens/ETH to purchase the ticket plus gas fees.
+                <div class="info" style="background: #fff3cd;">
+                    <strong>💡 Quick Test Setup:</strong><br>
+                    Use Hardhat test account #2 (different from seller):<br>
+                    • Address: <code>0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC</code><br>
+                    • Private Key: <code>0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a</code>
                 </div>
                 
-                <button onclick="buyTicket()" id="buy-btn" disabled>Buy Ticket (Blockchain Tx)</button>
+                <div class="info">
+                    <strong>📝 What happens:</strong><br>
+                    1. System checks if buyer has enough SystemTokens<br>
+                    2. Auto-approves marketplace to spend tokens (if needed)<br>
+                    3. Executes buy transaction<br>
+                    4. NFT ownership transfers to buyer
+                </div>
+                
+                <button onclick="buyTicket()">Buy Ticket (Blockchain Tx)</button>
                 <pre id="buy-response">Response will appear here...</pre>
                 <div id="purchase-data" class="saved-data" style="display:none;">
-                    <strong>Transaction Hash:</strong> <span id="buy-tx-hash"></span>
+                    <strong>Approval Tx:</strong> <span id="buy-approval-tx"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('buy-approval-tx')">Copy</button><br>
+                    <strong>Purchase Tx:</strong> <span id="buy-tx-hash"></span>
                     <button class="copy-btn" onclick="copyToClipboard('buy-tx-hash')">Copy</button><br>
                     <strong>New Owner:</strong> <span id="new-owner"></span>
                 </div>
@@ -294,7 +325,7 @@
                     <strong>📱 Note:</strong> In production, this would be triggered by scanning the ticket's QR code at the venue entrance.
                 </div>
                 
-                <button onclick="checkinTicket()" id="checkin-btn" disabled>Check-in Ticket</button>
+                <button onclick="checkinTicket()" id="checkin-btn">Check-in Ticket</button>
                 <pre id="checkin-response">Response will appear here...</pre>
                 <div id="checkin-data" class="saved-data" style="display:none;">
                     <strong>Check-in Time:</strong> <span id="checkin-time"></span><br>
@@ -370,7 +401,6 @@
 
                 document.getElementById('wallet-address').textContent = walletAddress;
                 document.getElementById('wallet-status').style.display = 'block';
-                document.getElementById('sign-btn').disabled = false;
                 document.getElementById('mint-wallet').value = walletAddress;
                 document.getElementById('buy-buyer').value = walletAddress;
 
@@ -399,7 +429,6 @@
                     userId = data.user.id;
                     document.getElementById('user-id').textContent = userId;
                     document.getElementById('user-data').style.display = 'block';
-                    document.getElementById('create-event-btn').disabled = false;
                     updateProgress(2);
                     showSuccess('User registered successfully!');
                 } else {
@@ -428,7 +457,6 @@
                     walletAddress = data.wallet_address;
                     document.getElementById('user-id').textContent = userId;
                     document.getElementById('user-data').style.display = 'block';
-                    document.getElementById('create-event-btn').disabled = false;
                     document.getElementById('mint-wallet').value = walletAddress;
                     document.getElementById('buy-buyer').value = walletAddress;
                     updateProgress(2);
@@ -519,9 +547,6 @@
                     txHash = data.transactionHash;
                     document.getElementById('tx-hash').textContent = txHash;
                     document.getElementById('ticket-data').style.display = 'block';
-                    document.getElementById('list-btn').disabled = false;
-                    document.getElementById('buy-btn').disabled = false;
-                    document.getElementById('checkin-btn').disabled = false;
                     updateProgress(4);
                     showSuccess('Ticket minted successfully! Wait for indexer to sync...');
                     
@@ -540,10 +565,21 @@
 
         async function listTicket() {
             try {
+                const sellerWallet = document.getElementById('list-seller').value;
+                const sellerKey = document.getElementById('list-seller-key').value;
+                
+                if (!sellerWallet || !sellerKey) {
+                    showError('Please provide both seller wallet address and private key');
+                    return;
+                }
+                
+                document.getElementById('list-response').textContent = 'Listing ticket... (approving + listing transactions)...';
+                
                 const body = {
                     tokenId: document.getElementById('list-token-id').value,
                     price: document.getElementById('list-price').value,
-                    seller_wallet: document.getElementById('list-seller').value || walletAddress
+                    seller_wallet: sellerWallet,
+                    seller_private_key: sellerKey
                 };
 
                 const response = await fetch(`${API_BASE}/api/marketplace/list-ticket`, {
@@ -556,9 +592,12 @@
                 document.getElementById('list-response').textContent = JSON.stringify(data, null, 2);
 
                 if (response.ok) {
-                    if (data.id) {
-                        document.getElementById('listing-id').textContent = data.id;
-                        document.getElementById('listing-status').textContent = data.status || 'active';
+                    if (data.approvalTxHash) {
+                        document.getElementById('approval-tx').textContent = data.approvalTxHash;
+                    }
+                    if (data.listingTxHash) {
+                        document.getElementById('listing-tx').textContent = data.listingTxHash;
+                        document.getElementById('listing-status').textContent = 'active';
                         document.getElementById('listing-data').style.display = 'block';
                     }
                     updateProgress(5);
@@ -574,10 +613,20 @@
 
         async function buyTicket() {
             try {
+                const buyerAddress = document.getElementById('buy-buyer').value;
+                const buyerKey = document.getElementById('buy-buyer-key').value;
+                
+                if (!buyerAddress || !buyerKey) {
+                    showError('Please provide both buyer wallet address and private key');
+                    return;
+                }
+                
+                document.getElementById('buy-response').textContent = 'Purchasing ticket... (checking balance, approving if needed, then buying)...';
+                
                 const body = {
                     tokenId: document.getElementById('buy-token-id').value,
-                    buyerAddress: document.getElementById('buy-buyer').value,
-                    amount: document.getElementById('buy-amount').value || undefined
+                    buyerAddress: buyerAddress,
+                    buyer_private_key: buyerKey
                 };
 
                 const response = await fetch(`${API_BASE}/api/marketplace/buy-ticket`, {
@@ -590,9 +639,12 @@
                 document.getElementById('buy-response').textContent = JSON.stringify(data, null, 2);
 
                 if (response.ok) {
+                    if (data.approvalTxHash) {
+                        document.getElementById('buy-approval-tx').textContent = data.approvalTxHash;
+                    }
                     if (data.transactionHash) {
                         document.getElementById('buy-tx-hash').textContent = data.transactionHash;
-                        document.getElementById('new-owner').textContent = body.buyerAddress;
+                        document.getElementById('new-owner').textContent = buyerAddress;
                         document.getElementById('purchase-data').style.display = 'block';
                     }
                     updateProgress(6);

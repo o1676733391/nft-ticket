@@ -1,9 +1,29 @@
 import { Router } from 'express';
 import { ethers } from 'ethers';
-import { provider, adminWallet } from '../config';
+import { provider, adminWallet, supabase } from '../config';
 import { TICKET_NFT_ABI } from '../abi/TicketNFT';
 
 const router = Router();
+
+// GET /api/checkin/logs
+// Get check-in logs with optional filters
+router.get('/logs', async (req, res) => {
+    try {
+        const { event_id, token_id } = req.query;
+        
+        let query = supabase.from('checkin_logs').select('*');
+        
+        if (event_id) query = query.eq('event_id', event_id);
+        if (token_id) query = query.eq('token_id', token_id);
+        
+        const { data, error } = await query.order('timestamp', { ascending: false });
+        
+        if (error) throw error;
+        res.status(200).json(data || []);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Could not fetch check-in logs.', details: error.message });
+    }
+});
 
 router.post('/check-in', async (req, res) => {
     const { tokenId } = req.body;
