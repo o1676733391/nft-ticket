@@ -3,6 +3,27 @@ import { supabase, ticketContract } from '../config';
 
 export const ticketRouter = Router();
 
+// GET /api/tickets
+// Get all tickets with optional filters
+ticketRouter.get('/', async (req, res) => {
+    try {
+        const { event_id, owner_wallet, status } = req.query;
+        
+        let query = supabase.from('tickets').select('*');
+        
+        if (event_id) query = query.eq('event_id', event_id);
+        if (owner_wallet) query = query.ilike('owner_wallet', owner_wallet as string);
+        if (status) query = query.eq('status', status);
+        
+        const { data, error } = await query.order('minted_at', { ascending: false });
+        
+        if (error) throw error;
+        res.status(200).json(data || []);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Could not fetch tickets.', details: error.message });
+    }
+});
+
 // POST /api/tickets/mint
 // Mints a new ticket for a user
 ticketRouter.post('/mint', async (req, res) => {

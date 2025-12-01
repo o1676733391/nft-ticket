@@ -250,26 +250,10 @@ router.get('/listings', async (req, res) => {
             .order('listed_at', { ascending: false });
 
         if (error) throw error;
-        res.status(200).json(data);
+        res.status(200).json(data || []);
     } catch (error: any) {
-        res.status(500).json({ error: 'Could not fetch listings.', details: error.message });
-    }
-});
-
-
-// GET /api/marketplace
-// Get all active listings
-router.get('/', async (req, res) => {
-    try {
-        const { data, error } = await supabase
-            .from('marketplace_full') // Use the view
-            .select('*')
-            .order('listed_at', { ascending: false });
-
-        if (error) throw error;
-        res.status(200).json(data);
-    } catch (error: any) {
-        res.status(500).json({ error: 'Could not fetch listings.', details: error.message });
+        console.error('Error fetching listings:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

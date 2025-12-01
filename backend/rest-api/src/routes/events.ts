@@ -40,6 +40,43 @@ eventRouter.post('/test-user', async (req, res) => {
     }
 });
 
+// GET /api/events/stats
+// Get event statistics and analytics
+eventRouter.get('/stats', async (req, res) => {
+    try {
+        const { event_id } = req.query;
+        
+        // Get basic event stats
+        let eventsQuery = supabase.from('events').select('id, title, total_supply, total_sold, created_at');
+        if (event_id) eventsQuery = eventsQuery.eq('id', event_id);
+        
+        const { data: events, error: eventsError } = await eventsQuery;
+        if (eventsError) throw eventsError;
+        
+        // Get ticket counts by status
+        let ticketsQuery = supabase.from('tickets').select('status, event_id');
+        if (event_id) ticketsQuery = ticketsQuery.eq('event_id', event_id);
+        
+        const { data: tickets, error: ticketsError } = await ticketsQuery;
+        if (ticketsError) throw ticketsError;
+        
+        // Count by status
+        const statusCounts = tickets?.reduce((acc: any, ticket: any) => {
+            acc[ticket.status] = (acc[ticket.status] || 0) + 1;
+            return acc;
+        }, {});
+        
+        res.status(200).json({
+            events,
+            totalTickets: tickets?.length || 0,
+            ticketsByStatus: statusCounts || {},
+            timestamp: new Date().toISOString()
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: 'Could not fetch stats.', details: error.message });
+    }
+});
+
 // GET /api/events
 // Gets all events
 eventRouter.get('/', async (req, res) => {
