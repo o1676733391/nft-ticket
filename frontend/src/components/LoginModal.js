@@ -1,96 +1,159 @@
 // src/components/LoginModal.js
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
+import { loginWithWallet } from '../services/walletAuth';
+import { loginWithEmail } from '../services/emailAuth';
+import { useAuthStore } from '../store/authStore';
+import Toast from 'react-native-toast-message';
 
 export default function LoginModal({ onClose, onSwitchToRegister, onLoginSuccess }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const setUser = useAuthStore((state) => state.setUser);
+  
+  const isWeb = Platform.OS === 'web';
+
+  // Web: MetaMask Authentication
+  if (isWeb) {
+    return (
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.closeText}>✕</Text>
+          </TouchableOpacity>
+
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Connect Wallet</Text>
+            <View style={styles.mascot}>
+              <Text style={{ fontSize: 26 }}>🦊</Text>
+            </View>
+          </View>
+
+          <View style={styles.body}>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={async () => {
+                setIsLoading(true);
+                try {
+                  const { user, address } = await loginWithWallet();
+                  setUser(user, address);
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Connected!',
+                    text2: `Welcome ${address.slice(0, 6)}...${address.slice(-4)}`
+                  });
+                  if (onLoginSuccess) onLoginSuccess(user);
+                  onClose();
+                } catch (error) {
+                  Toast.show({
+                    type: 'error',
+                    text1: 'Connection Failed',
+                    text2: error.message
+                  });
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryText}>🦊 Connect MetaMask</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Mobile: Email/Password Authentication
   return (
     <View style={styles.overlay}>
-      <View className="login-modal-card" style={styles.card}>
-        {/* Nút X */}
+      <View style={styles.card}>
         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
           <Text style={styles.closeText}>✕</Text>
         </TouchableOpacity>
 
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Đăng nhập</Text>
-          <View style={styles.mascot}>
-            <Text style={{ fontSize: 26 }}>🐶</Text>
-          </View>
+          <Text style={styles.headerTitle}>Login</Text>
+          <Text style={styles.subtitle}>Welcome back!</Text>
         </View>
 
-        {/* Body */}
         <View style={styles.body}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Nhập email hoặc số điện thoại</Text>
-            <TextInput
-              placeholder="Nhập email hoặc số điện thoại"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            placeholder="your@email.com"
+            placeholderTextColor="#9ca3af"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Nhập mật khẩu</Text>
-            <TextInput
-              placeholder="Nhập mật khẩu"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            placeholder="••••••••"
+            placeholderTextColor="#9ca3af"
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
           <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => {
-              // mock login success — in real app validate credentials
-              const user = {
-                name: "Tài khoản",
-                avatar: require("../../asset/concert-show-performance.jpg"),
-              };
-              if (onLoginSuccess) onLoginSuccess(user);
+            style={[styles.primaryBtn, (!email || !password) && styles.disabledBtn]}
+            onPress={async () => {
+              if (!email || !password) return;
+              setIsLoading(true);
+              try {
+                const { user } = await loginWithEmail(email, password);
+                setUser(user, null); // No wallet address for email auth
+                Toast.show({
+                  type: 'success',
+                  text1: 'Login Successful!',
+                  text2: `Welcome back, ${user.username || user.email}`
+                });
+                if (onLoginSuccess) onLoginSuccess(user);
+                onClose();
+              } catch (error) {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Login Failed',
+                  text2: error.message
+                });
+              } finally {
+                setIsLoading(false);
+              }
             }}
+            disabled={isLoading || !email || !password}
           >
-            <Text style={styles.primaryText}>Tiếp tục</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryText}>Login</Text>
+            )}
           </TouchableOpacity>
 
-
-
-          <TouchableOpacity>
-            <Text style={styles.linkCenter}>Quên mật khẩu?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={onSwitchToRegister}>
-            <Text style={styles.linkCenter}>
-              Chưa có tài khoản? Tạo tài khoản ngay
+          <TouchableOpacity
+            style={styles.registerLink}
+            onPress={onSwitchToRegister}
+          >
+            <Text style={styles.registerText}>
+              Don't have an account? <Text style={styles.registerTextBold}>Register</Text>
             </Text>
           </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Hoặc</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Login Google */}
-          <TouchableOpacity style={styles.googleBtn}>
-            <View style={styles.googleIcon}>
-              <Text style={{ fontSize: 16 }}>G</Text>
-            </View>
-            <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.footerText}>
-            Bằng việc tiếp tục, bạn đã đọc và đồng ý với Điều khoản sử dụng
-            và Chính sách bảo mật thông tin cá nhân của Ticketbox.
-          </Text>
         </View>
       </View>
     </View>
@@ -182,6 +245,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 15,
   },
+  secondaryBtn: {
+    marginTop: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#667eea",
+    borderRadius: 6,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  secondaryText: {
+    color: "#667eea",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  disabledBtn: {
+    opacity: 0.5,
+  },
   cfRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -256,5 +336,22 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     lineHeight: 15,
     textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#fff",
+    marginTop: 4,
+  },
+  registerLink: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  registerText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  registerTextBold: {
+    color: "#19c48a",
+    fontWeight: "700",
   },
 });

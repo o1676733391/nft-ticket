@@ -4,6 +4,35 @@
     "slug": "ticketbox-expo",
     "platforms": ["android", "ios", "web"],
     "version": "1.0.0",
-    "sdkVersion": "54.0.0"
+    "orientation": "portrait",
+    "icon": "./asset/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./asset/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ticketbox.expo"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./asset/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.ticketbox.expo"
+    },
+    "web": {
+      "favicon": "./asset/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ]
+    ]
   }
 }

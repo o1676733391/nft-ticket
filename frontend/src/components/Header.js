@@ -7,18 +7,22 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-} from "react-native-web";
-import { Platform } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native"; // chỉ cần dòng này
+  Platform,
+} from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import SearchDropdown from "./SearchDropdown";
 import { homeData } from "../data/homeData";
 import { useAuth } from "../context/AuthContext";
+import { useAuthStore } from "../store/authStore";
 
 export default function Header({ onLoginPress, user: userProp, onLogout }) {
   const navigation = useNavigation();
   const auth = useAuth();
-  const user = userProp ?? auth.user;
+  const { user: storeUser, walletAddress, isAuthenticated, logout: storeLogout } = useAuthStore();
+  
+  // Use Zustand store if available, fallback to props/context
+  const user = storeUser || userProp || auth.user;
   const route = useRoute();
 
   const [searchText, setSearchText] = useState("");
@@ -53,6 +57,8 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
 
   const handleLogout = () => {
     setShowAccountMenu(false);
+    // Call both logout methods
+    storeLogout();
     auth?.logout?.();
     navigation.navigate("Home");
   };
@@ -100,8 +106,19 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
               style={styles.accountRow}
               onPress={handleAccountToggle}
             >
-              <Image source={user.avatar} style={styles.avatar} />
-              <Text style={styles.accountText}>{user.name} ▾</Text>
+              {user.avatar ? (
+                <Image source={user.avatar} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarPlaceholderText}>👤</Text>
+                </View>
+              )}
+              <Text style={styles.accountText}>
+                {walletAddress 
+                  ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                  : user.name || 'Account'
+                } ▾
+              </Text>
             </TouchableOpacity>
 
             {showAccountMenu && (
@@ -169,19 +186,22 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
 const styles = StyleSheet.create({
   header: {
     backgroundColor: "#19c48a",
-    paddingVertical: 25,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 18,
+    gap: 8,
+    flexWrap: "wrap",
   },
   logo: {
     color: "#fff",
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "bold",
+    minWidth: 100,
   },
   searchContainer: {
     flex: 1,
+    minWidth: 200,
     backgroundColor: "#fff",
     flexDirection: "row",
     borderRadius: 6,
@@ -190,32 +210,36 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    fontSize: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
     outlineStyle: "none",
   },
   searchButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     justifyContent: "center",
   },
   searchButtonText: {
     color: "#4f4747ff",
     fontWeight: "500",
+    fontSize: 13,
   },
   createButton: {
     backgroundColor: "#21d598",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
+    fontSize: 13,
   },
   createButtonText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 13,
   },
   loginText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
   accountRow: {
@@ -225,17 +249,31 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: "rgba(255,255,255,0.06)",
+    maxWidth: 150,
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    marginRight: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 6,
+  },
+  avatarPlaceholder: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarPlaceholderText: {
+    fontSize: 14,
   },
   accountText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
+    flexShrink: 1,
   },
   accountMenu: {
     position: "absolute",

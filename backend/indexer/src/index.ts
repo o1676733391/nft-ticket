@@ -101,19 +101,19 @@ async function loadLastProcessedBlock() {
       .single()
 
     if (data && !error) {
-      // For local development, always start from block 0
+      lastProcessedBlock = BigInt(data.last_block)
+      console.log(`📍 Resuming from block: ${lastProcessedBlock}`)
+    } else {
+      // No state found - first run
+      // For local dev, start from 0; for production, start from recent blocks
       if (process.env.CHAIN_ID === '1337') {
         lastProcessedBlock = BigInt(0)
-        console.log(`🏠 Local network detected, starting from block: 0`)
+        console.log(`🏠 Local network - first run, starting from block: 0`)
       } else {
-        lastProcessedBlock = BigInt(data.last_block)
-        console.log(`📍 Resuming from block: ${lastProcessedBlock}`)
+        const currentBlock = await publicClient.getBlockNumber()
+        lastProcessedBlock = currentBlock - BigInt(100) // Start from 100 blocks ago
+        console.log(`🆕 First run, starting from block: ${lastProcessedBlock}`)
       }
-    } else {
-      // Start from recent block if no state found
-      const currentBlock = await publicClient.getBlockNumber()
-      lastProcessedBlock = currentBlock - BigInt(100) // Start from 100 blocks ago
-      console.log(`🆕 Starting from block: ${lastProcessedBlock}`)
     }
   } catch (error) {
     console.error('Error loading last processed block:', error)

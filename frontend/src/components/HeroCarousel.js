@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-} from "react-native-web";
+} from "react-native";
 
 import { useNavigation } from "@react-navigation/native";
 
