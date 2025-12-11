@@ -9,10 +9,17 @@ import {
   Image,
   TextInput,
   Platform,
+  Dimensions,
+  Modal,
+  Alert,
 } from "react-native";
-import Header from "../components/Header";
+import { useNavigation } from "@react-navigation/native";
+import OrganizerHeader from "../components/OrganizerHeader";
 import OrganizerSidebar from "../components/OrganizerSidebar";
 import * as ImagePicker from "expo-image-picker";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const isMobile = Platform.OS === "ios" || Platform.OS === "android" || SCREEN_WIDTH < 768;
 
 // ===== MẪU NỘI DUNG THÔNG TIN SỰ KIỆN =====
 const EVENT_DESC_TEMPLATE = `Giới thiệu sự kiện:
@@ -37,6 +44,11 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function CreateEventScreen() {
+  const navigation = useNavigation();
+  
+  // Current step (1-4)
+  const [currentStep, setCurrentStep] = useState(1);
+  
   // Ảnh
   const [mainImage, setMainImage] = useState(null);      // ảnh sự kiện (720x958)
   const [coverImage, setCoverImage] = useState(null);    // ảnh nền (1280x720)
@@ -62,6 +74,86 @@ export default function CreateEventScreen() {
   // Ban tổ chức
   const [organizerName, setOrganizerName] = useState("");
   const [organizerInfo, setOrganizerInfo] = useState("");
+
+  // Sidebar drawer for mobile
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  // ================= VALIDATION =================
+  const validateStep1 = () => {
+    const errors = [];
+    
+    if (!mainImage) {
+      errors.push("Vui lòng chọn ảnh sự kiện");
+    }
+    if (!eventName.trim()) {
+      errors.push("Vui lòng nhập tên sự kiện");
+    }
+    if (eventName.length > 100) {
+      errors.push("Tên sự kiện không được quá 100 ký tự");
+    }
+    if (isOffline && !venueName.trim()) {
+      errors.push("Vui lòng nhập tên địa điểm");
+    }
+    if (!organizerName.trim()) {
+      errors.push("Vui lòng nhập tên ban tổ chức");
+    }
+    if (!organizerInfo.trim()) {
+      errors.push("Vui lòng nhập thông tin ban tổ chức");
+    }
+    
+    return errors;
+  };
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      const errors = validateStep1();
+      
+      if (errors.length > 0) {
+        Alert.alert(
+          "Thông tin chưa đầy đủ",
+          errors.join("\n"),
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      
+      // Lưu data step 1 và chuyển sang step 2
+      const step1Data = {
+        mainImage,
+        coverImage,
+        eventName,
+        isOffline,
+        venueName,
+        city,
+        district,
+        ward,
+        street,
+        category,
+        eventDescription,
+        organizerName,
+        organizerInfo,
+        organizerLogo,
+      };
+      
+      // Navigate to step 2 (Time & Ticket Types)
+      navigation.navigate("CreateEventStep2", { eventData: step1Data });
+    }
+  };
+
+  const handleCancel = () => {
+    Alert.alert(
+      "Hủy tạo sự kiện?",
+      "Bạn có chắc muốn hủy? Thông tin đã nhập sẽ không được lưu.",
+      [
+        { text: "Tiếp tục chỉnh sửa", style: "cancel" },
+        { 
+          text: "Hủy", 
+          style: "destructive",
+          onPress: () => navigation.goBack()
+        },
+      ]
+    );
+  };
 
   // ================= IMAGE PICKER (web + mobile) =================
   const pickImage = async (target) => {
@@ -97,7 +189,7 @@ export default function CreateEventScreen() {
 
   // Box upload dùng chung
   const UploadBox = ({ uri, labelTop, labelBottom, sizeText, onPress }) => (
-    <TouchableOpacity style={styles.uploadBox} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={isMobile ? styles.uploadBoxMobile : styles.uploadBox} onPress={onPress} activeOpacity={0.8}>
       {uri ? (
         <Image source={{ uri }} style={styles.uploadImage} />
       ) : (
@@ -113,16 +205,69 @@ export default function CreateEventScreen() {
     </TouchableOpacity>
   );
 
+  // Hamburger Icon Component
+  const HamburgerIcon = () => (
+    <TouchableOpacity
+      style={styles.hamburgerBtn}
+      onPress={() => setSidebarVisible(true)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+    </TouchableOpacity>
+  );
+
+  // Mobile Sidebar Drawer
+  const SidebarDrawer = () => (
+    <Modal
+      visible={sidebarVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setSidebarVisible(false)}
+    >
+      <View style={styles.drawerOverlay}>
+        <TouchableOpacity
+          style={styles.drawerBackdrop}
+          activeOpacity={1}
+          onPress={() => setSidebarVisible(false)}
+        />
+        <View style={styles.drawerContent}>
+          <TouchableOpacity
+            style={styles.drawerCloseBtn}
+            onPress={() => setSidebarVisible(false)}
+          >
+            <Text style={styles.drawerCloseText}>✕</Text>
+          </TouchableOpacity>
+          <OrganizerSidebar onItemPress={() => setSidebarVisible(false)} />
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.screen}>
-      <Header />
+      <OrganizerHeader title="Tạo sự kiện" />
+
+      {/* Mobile Sidebar Drawer */}
+      {isMobile && <SidebarDrawer />}
 
       <View style={styles.pageBody}>
-        <OrganizerSidebar />
+        {/* Desktop: show sidebar, Mobile: hide sidebar */}
+        {!isMobile && <OrganizerSidebar />}
 
         <ScrollView style={styles.mainScroll} contentContainerStyle={{ paddingBottom: 80 }}>
+          {/* Mobile: Hamburger + Title Bar */}
+          {isMobile && (
+            <View style={styles.mobileTopBar}>
+              <HamburgerIcon />
+              <Text style={styles.mobileTitle}>Tạo sự kiện</Text>
+              <View style={{ width: 40 }} />
+            </View>
+          )}
+
           {/* ===== THANH BƯỚC (STEP BAR) ===== */}
-          <View style={styles.stepBar}>
+          <View style={isMobile ? styles.stepBarMobile : styles.stepBar}>
           {[
             "Thông tin sự kiện",
             "Thời gian & Loại vé",
@@ -130,9 +275,10 @@ export default function CreateEventScreen() {
             "Thông tin thanh toán",
           ].map((label, index) => {
             const step = index + 1;
-            const active = step === 1;
+            const active = step === currentStep;
+            const completed = step < currentStep;
             return (
-              <View key={label} style={styles.stepItem}>
+              <View key={label} style={isMobile ? styles.stepItemMobile : styles.stepItem}>
                 <View
                   style={[
                     styles.stepCircle,
@@ -148,30 +294,32 @@ export default function CreateEventScreen() {
                     {step}
                   </Text>
                 </View>
-                <Text
-                  style={[styles.stepLabel, active && styles.stepLabelActive]}
-                >
-                  {label}
-                </Text>
+                {!isMobile && (
+                  <Text
+                    style={[styles.stepLabel, active && styles.stepLabelActive]}
+                  >
+                    {label}
+                  </Text>
+                )}
               </View>
             );
           })}
         </View>
 
         {/* ===== CARD CHỨA FORM ===== */}
-        <View style={styles.card}>
+        <View style={isMobile ? styles.cardMobile : styles.card}>
           {/* ==== UPLOAD HÌNH ẢNH ==== */}
           <Text style={styles.sectionTitle}>
             <Text style={styles.redStar}>* </Text>
             Upload hình ảnh{" "}
-            <Text style={styles.linkText}>Xem vị trí hiển thị các ảnh</Text>
+            {!isMobile && <Text style={styles.linkText}>Xem vị trí hiển thị các ảnh</Text>}
           </Text>
 
-          <View style={styles.uploadRow}>
+          <View style={isMobile ? styles.uploadRowMobile : styles.uploadRow}>
             <UploadBox
               uri={mainImage}
-              labelTop="Thêm ảnh sự kiện để"
-              labelBottom="hiển thị ở các vị trí khác"
+              labelTop="Thêm ảnh sự kiện"
+              labelBottom={isMobile ? "" : "hiển thị ở các vị trí khác"}
               sizeText="(720x958)"
               onPress={() => pickImage("main")}
             />
@@ -268,8 +416,8 @@ export default function CreateEventScreen() {
           </View>
 
           {/* Tỉnh / Thành & Quận / Huyện */}
-          <View style={styles.fieldRow}>
-            <View style={[styles.fieldCol, { marginRight: 12 }]}>
+          <View style={isMobile ? styles.fieldRowMobile : styles.fieldRow}>
+            <View style={isMobile ? styles.fieldColMobile : [styles.fieldCol, { marginRight: 12 }]}>
               <Text style={styles.fieldLabel}>Tỉnh/Thành</Text>
               <TextInput
                 style={styles.input}
@@ -279,7 +427,7 @@ export default function CreateEventScreen() {
                 onChangeText={setCity}
               />
             </View>
-            <View style={[styles.fieldCol, { marginLeft: 12 }]}>
+            <View style={isMobile ? styles.fieldColMobile : [styles.fieldCol, { marginLeft: 12 }]}>
               <Text style={styles.fieldLabel}>Quận/Huyện</Text>
               <TextInput
                 style={styles.input}
@@ -292,8 +440,8 @@ export default function CreateEventScreen() {
           </View>
 
           {/* Phường / Xã & Số nhà đường */}
-          <View style={styles.fieldRow}>
-            <View style={[styles.fieldCol, { marginRight: 12 }]}>
+          <View style={isMobile ? styles.fieldRowMobile : styles.fieldRow}>
+            <View style={isMobile ? styles.fieldColMobile : [styles.fieldCol, { marginRight: 12 }]}>
               <Text style={styles.fieldLabel}>Phường/Xã</Text>
               <TextInput
                 style={styles.input}
@@ -303,7 +451,7 @@ export default function CreateEventScreen() {
                 onChangeText={setWard}
               />
             </View>
-            <View style={[styles.fieldCol, { marginLeft: 12 }]}>
+            <View style={isMobile ? styles.fieldColMobile : [styles.fieldCol, { marginLeft: 12 }]}>
               <Text style={styles.fieldLabel}>Số nhà, đường</Text>
               <TextInput
                 style={styles.input}
@@ -377,9 +525,9 @@ export default function CreateEventScreen() {
               <Text style={styles.redStar}>* </Text>Ban tổ chức
             </Text>
 
-            <View style={styles.organizerRow}>
+            <View style={isMobile ? styles.organizerRowMobile : styles.organizerRow}>
               <TouchableOpacity
-                style={styles.logoBox}
+                style={isMobile ? styles.logoBoxMobile : styles.logoBox}
                 onPress={() => pickImage("logo")}
                 activeOpacity={0.8}
               >
@@ -401,7 +549,7 @@ export default function CreateEventScreen() {
                 )}
               </TouchableOpacity>
 
-              <View style={{ flex: 1, marginLeft: 20 }}>
+              <View style={isMobile ? styles.organizerInfoMobile : { flex: 1, marginLeft: 20 }}>
                 <Text style={styles.fieldLabel}>
                   <Text style={styles.redStar}>* </Text>Tên ban tổ chức
                 </Text>
@@ -428,6 +576,25 @@ export default function CreateEventScreen() {
               </View>
             </View>
           </View>
+
+          {/* ===== NÚT ĐIỀU HƯỚNG ===== */}
+          <View style={isMobile ? styles.navigationButtonsMobile : styles.navigationButtons}>
+            <TouchableOpacity
+              style={styles.btnSecondary}
+              activeOpacity={0.8}
+              onPress={handleCancel}
+            >
+              <Text style={styles.btnSecondaryText}>Hủy</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.btnPrimary}
+              activeOpacity={0.8}
+              onPress={handleNextStep}
+            >
+              <Text style={styles.btnPrimaryText}>Tiếp theo</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         </ScrollView>
       </View>
@@ -443,18 +610,82 @@ const styles = StyleSheet.create({
   },
 
   pageBody: {
-  flex: 1,
-  flexDirection: "row",
-  alignItems: "flex-start",
-},
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
 
-mainScroll: {
-  flex: 1,
-  height: "100vh",
-  overflowY: "auto",
-},
+  mainScroll: {
+    flex: 1,
+    height: "100vh",
+    overflowY: "auto",
+  },
 
+  // Mobile Top Bar with Hamburger
+  mobileTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#020617",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2937",
+  },
+  mobileTitle: {
+    color: "#22c55e",
+    fontSize: 18,
+    fontWeight: "700",
+  },
 
+  // Hamburger Button
+  hamburgerBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 8,
+  },
+  hamburgerLine: {
+    width: 22,
+    height: 3,
+    backgroundColor: "#22c55e",
+    borderRadius: 2,
+    marginVertical: 2,
+  },
+
+  // Drawer Styles
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  drawerContent: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 280,
+    backgroundColor: "#072018",
+  },
+  drawerCloseBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  drawerCloseText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
 
   // Step bar
   stepBar: {
@@ -464,10 +695,23 @@ mainScroll: {
     paddingTop: 18,
     paddingBottom: 10,
   },
+  stepBarMobile: {
+    flexDirection: "row",
+    justifyContent: "center",
+    backgroundColor: "#020617",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
   stepItem: {
     flexDirection: "row",
     alignItems: "center",
     marginRight: 40,
+  },
+  stepItemMobile: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 8,
   },
   stepCircle: {
     width: 22,
@@ -508,6 +752,13 @@ mainScroll: {
     backgroundColor: "#020617",
     paddingVertical: 24,
   },
+  cardMobile: {
+    marginHorizontal: 0,
+    marginTop: 10,
+    borderRadius: 0,
+    backgroundColor: "#020617",
+    paddingVertical: 16,
+  },
 
   sectionTitle: {
     color: "#e5e7eb",
@@ -525,6 +776,11 @@ mainScroll: {
     marginBottom: 24,
     columnGap: 12,
   },
+  uploadRowMobile: {
+    flexDirection: "column",
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
   uploadBox: {
     flex: 1,
     height: 260,
@@ -536,6 +792,19 @@ mainScroll: {
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+  uploadBoxMobile: {
+    width: "100%",
+    height: 180,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#4b5563",
+    backgroundColor: "#111827",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
   uploadImage: {
     width: "100%",
@@ -646,8 +915,17 @@ mainScroll: {
     paddingHorizontal: 16,
     marginTop: 14,
   },
+  fieldRowMobile: {
+    flexDirection: "column",
+    paddingHorizontal: 16,
+    marginTop: 0,
+  },
   fieldCol: {
     flex: 1,
+  },
+  fieldColMobile: {
+    width: "100%",
+    marginTop: 14,
   },
 
   // Dropdown thể loại
@@ -689,6 +967,15 @@ mainScroll: {
     alignItems: "flex-start",
     marginTop: 10,
   },
+  organizerRowMobile: {
+    flexDirection: "column",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  organizerInfoMobile: {
+    width: "100%",
+    marginTop: 16,
+  },
   logoBox: {
     width: 210,
     height: 210,
@@ -701,9 +988,72 @@ mainScroll: {
     alignItems: "center",
     justifyContent: "center",
   },
+  logoBoxMobile: {
+    width: 150,
+    height: 150,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#4b5563",
+    backgroundColor: "#111827",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   logoImage: {
     width: "100%",
     height: "100%",
     resizeMode: "cover",
+  },
+
+  // Navigation Buttons
+  navigationButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#1f2937",
+    gap: 12,
+  },
+  navigationButtonsMobile: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#1f2937",
+  },
+  btnPrimary: {
+    backgroundColor: "#22c55e",
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    minWidth: 140,
+    alignItems: "center",
+  },
+  btnPrimaryText: {
+    color: "#052e16",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  btnSecondary: {
+    backgroundColor: "transparent",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#4b5563",
+    minWidth: 100,
+    alignItems: "center",
+  },
+  btnSecondaryText: {
+    color: "#e5e7eb",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

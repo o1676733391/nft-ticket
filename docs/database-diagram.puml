@@ -1,0 +1,480 @@
+@startuml NFT-Ticket-Database-Diagram
+
+!define TABLE(x) class x << (T,#FFAAAA) >>
+!define VIEW(x) class x << (V,#AAFFAA) >>
+!define ENUM(x) class x << (E,#AAAAFF) >>
+
+title NFT Ticket System - Database Schema Diagram
+footer Generated: December 2025 | NFT Ticketing Platform
+
+' ==========================================
+' ENUMS
+' ==========================================
+package "Enums" #EEEEFF {
+    ENUM(ticket_status) {
+        minted
+        listed
+        sold
+        checked_in
+        transferred
+        burned
+        cancelled
+    }
+
+    ENUM(listing_status) {
+        active
+        sold
+        cancelled
+    }
+
+    ENUM(transaction_type) {
+        mint
+        transfer
+        list
+        unlist
+        sale
+        burn
+    }
+
+    ENUM(account_type) {
+        user
+        organizer
+        admin
+    }
+
+    ENUM(order_status) {
+        pending
+        confirmed
+        cancelled
+        refunded
+        failed
+    }
+
+    ENUM(payment_method) {
+        card
+        momo
+        zalopay
+        vnpay
+        bank_transfer
+        free
+    }
+
+    ENUM(mobile_ticket_status) {
+        valid
+        used
+        cancelled
+        expired
+        transferred
+    }
+
+    ENUM(notification_type) {
+        order_confirmed
+        ticket_ready
+        event_reminder
+        event_update
+        promo
+        system
+    }
+}
+
+' ==========================================
+' BLOCKCHAIN LAYER (NFT/Web3)
+' ==========================================
+package "Blockchain Layer (NFT)" #FFEEEE {
+    TABLE(users) {
+        **id** : UUID <<PK>>
+        --
+        wallet_address : VARCHAR(42) <<UNIQUE>>
+        username : VARCHAR(50)
+        email : VARCHAR(255)
+        avatar_url : TEXT
+        bio : TEXT
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(events) {
+        **id** : UUID <<PK>>
+        --
+        organizer_id : UUID <<FK>>
+        title : VARCHAR(255)
+        description : TEXT
+        location : TEXT
+        venue_name : VARCHAR(255)
+        banner_url : TEXT
+        thumbnail_url : TEXT
+        category : VARCHAR(50)
+        start_date : TIMESTAMPTZ
+        end_date : TIMESTAMPTZ
+        event_id_onchain : BIGINT <<UNIQUE>>
+        contract_address : VARCHAR(42)
+        royalty_fee : INTEGER
+        is_active : BOOLEAN
+        is_published : BOOLEAN
+        total_supply : INTEGER
+        total_sold : INTEGER
+        metadata : JSONB
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(ticket_templates) {
+        **id** : UUID <<PK>>
+        --
+        event_id : UUID <<FK>>
+        name : VARCHAR(100)
+        description : TEXT
+        price_token : NUMERIC(20,2)
+        supply : INTEGER
+        sold : INTEGER
+        tier : INTEGER
+        royalty_fee : INTEGER
+        benefits : JSONB
+        metadata_uri : TEXT
+        is_soulbound : BOOLEAN
+        is_active : BOOLEAN
+        sale_starts_at : TIMESTAMPTZ
+        sale_ends_at : TIMESTAMPTZ
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(tickets) {
+        **id** : UUID <<PK>>
+        --
+        token_id : BIGINT <<UNIQUE>>
+        template_id : UUID <<FK>>
+        event_id : UUID <<FK>>
+        owner_wallet : VARCHAR(42)
+        original_owner : VARCHAR(42)
+        status : ticket_status
+        tx_hash : VARCHAR(66)
+        metadata_uri : TEXT
+        qr_code_url : TEXT
+        qr_hash : VARCHAR(64) <<UNIQUE>>
+        is_checked_in : BOOLEAN
+        checked_in_at : TIMESTAMPTZ
+        checked_in_by : UUID <<FK>>
+        is_transferable : BOOLEAN
+        minted_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(marketplace_listings) {
+        **id** : UUID <<PK>>
+        --
+        ticket_id : UUID <<FK>>
+        token_id : BIGINT
+        seller_wallet : VARCHAR(42)
+        price_token : NUMERIC(20,2)
+        status : listing_status
+        tx_hash : VARCHAR(66)
+        listed_at : TIMESTAMPTZ
+        sold_at : TIMESTAMPTZ
+        cancelled_at : TIMESTAMPTZ
+        buyer_wallet : VARCHAR(42)
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(checkin_logs) {
+        **id** : UUID <<PK>>
+        --
+        ticket_id : UUID <<FK>>
+        token_id : BIGINT
+        event_id : UUID <<FK>>
+        scanned_by : UUID <<FK>>
+        scanned_wallet : VARCHAR(42)
+        device_info : JSONB
+        location_info : JSONB
+        timestamp : TIMESTAMPTZ
+    }
+
+    TABLE(transactions) {
+        **id** : UUID <<PK>>
+        --
+        ticket_id : UUID <<FK>>
+        token_id : BIGINT
+        type : transaction_type
+        from_wallet : VARCHAR(42)
+        to_wallet : VARCHAR(42)
+        price_token : NUMERIC(20,2)
+        tx_hash : VARCHAR(66) <<UNIQUE>>
+        block_number : BIGINT
+        gas_used : BIGINT
+        metadata : JSONB
+        timestamp : TIMESTAMPTZ
+    }
+
+    TABLE(event_analytics) {
+        **id** : UUID <<PK>>
+        --
+        event_id : UUID <<FK>>
+        date : DATE
+        tickets_sold : INTEGER
+        revenue_token : NUMERIC(20,2)
+        unique_buyers : INTEGER
+        checkins_count : INTEGER
+        secondary_sales : INTEGER
+        secondary_revenue : NUMERIC(20,2)
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(whitelist) {
+        **id** : UUID <<PK>>
+        --
+        event_id : UUID <<FK>>
+        wallet_address : VARCHAR(42)
+        allocation : INTEGER
+        used : INTEGER
+        proof_data : JSONB
+        created_at : TIMESTAMPTZ
+    }
+}
+
+' ==========================================
+' MOBILE LAYER (Traditional Database)
+' ==========================================
+package "Mobile Layer (No Blockchain)" #EEFFEE {
+    TABLE(mobile_users) {
+        **id** : UUID <<PK>>
+        --
+        email : VARCHAR(255) <<UNIQUE>>
+        password_hash : VARCHAR(255)
+        username : VARCHAR(50)
+        full_name : VARCHAR(255)
+        phone : VARCHAR(20)
+        avatar_url : TEXT
+        acc_type : account_type
+        organization_name : VARCHAR(255)
+        organization_description : TEXT
+        organization_logo : TEXT
+        is_verified : BOOLEAN
+        is_organizer_verified : BOOLEAN
+        verification_token : VARCHAR(255)
+        reset_token : VARCHAR(255)
+        reset_token_expires : TIMESTAMPTZ
+        last_login_at : TIMESTAMPTZ
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(mobile_orders) {
+        **id** : UUID <<PK>>
+        --
+        user_id : UUID <<FK>>
+        event_id : UUID <<FK>>
+        template_id : UUID <<FK>>
+        quantity : INTEGER
+        unit_price : NUMERIC(20,2)
+        total_amount : NUMERIC(20,2)
+        discount_amount : NUMERIC(20,2)
+        promo_code : VARCHAR(50)
+        payment_method : payment_method
+        payment_reference : VARCHAR(255)
+        status : order_status
+        confirmed_at : TIMESTAMPTZ
+        cancelled_at : TIMESTAMPTZ
+        refunded_at : TIMESTAMPTZ
+        notes : TEXT
+        metadata : JSONB
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(mobile_tickets) {
+        **id** : UUID <<PK>>
+        --
+        order_id : UUID <<FK>>
+        user_id : UUID <<FK>>
+        event_id : UUID <<FK>>
+        template_id : UUID <<FK>>
+        ticket_code : VARCHAR(20) <<UNIQUE>>
+        qr_data : TEXT
+        status : mobile_ticket_status
+        is_checked_in : BOOLEAN
+        checked_in_at : TIMESTAMPTZ
+        checked_in_by : UUID <<FK>>
+        original_user_id : UUID <<FK>>
+        transferred_at : TIMESTAMPTZ
+        transferred_from : UUID <<FK>>
+        created_at : TIMESTAMPTZ
+        updated_at : TIMESTAMPTZ
+    }
+
+    TABLE(mobile_checkin_logs) {
+        **id** : UUID <<PK>>
+        --
+        ticket_id : UUID <<FK>>
+        event_id : UUID <<FK>>
+        scanned_by : UUID <<FK>>
+        device_info : JSONB
+        location_info : JSONB
+        scan_result : VARCHAR(50)
+        created_at : TIMESTAMPTZ
+    }
+
+    TABLE(promo_codes) {
+        **id** : UUID <<PK>>
+        --
+        code : VARCHAR(50) <<UNIQUE>>
+        description : TEXT
+        discount_type : VARCHAR(20)
+        discount_value : NUMERIC(10,2)
+        max_uses : INTEGER
+        current_uses : INTEGER
+        min_order_amount : NUMERIC(20,2)
+        max_discount_amount : NUMERIC(20,2)
+        event_id : UUID <<FK>>
+        starts_at : TIMESTAMPTZ
+        expires_at : TIMESTAMPTZ
+        is_active : BOOLEAN
+        created_at : TIMESTAMPTZ
+    }
+
+    TABLE(user_favorites) {
+        **id** : UUID <<PK>>
+        --
+        user_id : UUID <<FK>>
+        event_id : UUID <<FK>>
+        created_at : TIMESTAMPTZ
+    }
+
+    TABLE(notifications) {
+        **id** : UUID <<PK>>
+        --
+        user_id : UUID <<FK>>
+        type : notification_type
+        title : VARCHAR(255)
+        message : TEXT
+        data : JSONB
+        is_read : BOOLEAN
+        read_at : TIMESTAMPTZ
+        created_at : TIMESTAMPTZ
+    }
+}
+
+' ==========================================
+' SMART CONTRACTS (On-Chain)
+' ==========================================
+package "Smart Contracts (Blockchain)" #FFFFEE {
+    class TicketNFT << (C,#FFCC00) Contract >> {
+        + MINTER_ROLE : bytes32
+        + ORGANIZER_ROLE : bytes32
+        --
+        + tickets : mapping(tokenId => TicketInfo)
+        + events : mapping(eventId => EventInfo)
+        + transferLocked : mapping(tokenId => bool)
+        --
+        + createEvent(eventId, name, royaltyFee)
+        + mintTicket(to, eventId, templateId, uri, isSoulbound)
+        + batchMintTickets(recipients[], ...)
+        + checkIn(tokenId)
+        + setTransferLock(tokenId, locked)
+    }
+
+    class Marketplace << (C,#FFCC00) Contract >> {
+        + ticketNFT : IERC721
+        + systemToken : IERC20
+        + platformFee : uint256
+        + feeRecipient : address
+        --
+        + listings : mapping(tokenId => Listing)
+        + royalties : mapping(tokenId => RoyaltyInfo)
+        --
+        + list(tokenId, price)
+        + unlist(tokenId)
+        + buy(tokenId)
+        + setRoyalty(tokenId, recipient, fee)
+        + setPlatformFee(fee)
+    }
+
+    class SystemToken << (C,#FFCC00) Contract >> {
+        + name : string
+        + symbol : string
+        + decimals : uint8
+        --
+        + balanceOf : mapping(address => uint256)
+        + allowance : mapping(owner => spender => uint256)
+        --
+        + mint(to, amount)
+        + burn(amount)
+        + faucet(amount)
+        + transfer(to, amount)
+        + approve(spender, amount)
+    }
+
+    class "TicketInfo (struct)" as TicketInfoStruct {
+        eventId : uint256
+        templateId : uint256
+        organizer : address
+        isSoulbound : bool
+        isCheckedIn : bool
+        mintedAt : uint256
+    }
+
+    class "EventInfo (struct)" as EventInfoStruct {
+        name : string
+        organizer : address
+        royaltyFee : uint256
+        isActive : bool
+    }
+
+    class "Listing (struct)" as ListingStruct {
+        tokenId : uint256
+        seller : address
+        price : uint256
+        isActive : bool
+    }
+}
+
+' ==========================================
+' RELATIONSHIPS - Blockchain Layer
+' ==========================================
+users "1" --o "0..*" events : organizes
+events "1" --o "0..*" ticket_templates : has
+events "1" --o "0..*" tickets : contains
+ticket_templates "1" --o "0..*" tickets : defines
+tickets "1" --o "0..*" marketplace_listings : listed_in
+tickets "1" --o "0..*" checkin_logs : checked_in
+tickets "1" --o "0..*" transactions : involved_in
+events "1" --o "0..*" checkin_logs : belongs_to
+events "1" --o "0..*" event_analytics : analytics
+events "1" --o "0..*" whitelist : has
+
+' ==========================================
+' RELATIONSHIPS - Mobile Layer
+' ==========================================
+mobile_users "1" --o "0..*" mobile_orders : places
+mobile_users "1" --o "0..*" mobile_tickets : owns
+mobile_users "1" --o "0..*" user_favorites : favorites
+mobile_users "1" --o "0..*" notifications : receives
+events "1" --o "0..*" mobile_orders : for_event
+events "1" --o "0..*" mobile_tickets : for_event
+events "1" --o "0..*" user_favorites : favorited
+events "1" --o "0..1" promo_codes : has_promo
+ticket_templates "1" --o "0..*" mobile_orders : template
+ticket_templates "1" --o "0..*" mobile_tickets : template
+mobile_orders "1" --o "0..*" mobile_tickets : generates
+mobile_tickets "1" --o "0..*" mobile_checkin_logs : checked
+
+' ==========================================
+' CONTRACT RELATIONSHIPS
+' ==========================================
+TicketNFT "1" --> "0..*" TicketInfoStruct : stores
+TicketNFT "1" --> "0..*" EventInfoStruct : stores
+Marketplace "1" --> "1" TicketNFT : manages
+Marketplace "1" --> "1" SystemToken : uses_for_payment
+Marketplace "1" --> "0..*" ListingStruct : stores
+
+' ==========================================
+' CROSS-LAYER SYNC (Database <-> Blockchain)
+' ==========================================
+note "Sync via Indexer" as N1
+tickets .. TicketNFT : N1
+events .. TicketNFT : N1
+marketplace_listings .. Marketplace : N1
+transactions .. TicketNFT : N1
+transactions .. Marketplace : N1
+
+@enduml

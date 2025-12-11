@@ -1,16 +1,22 @@
 import React from 'react';
-import { View, FlatList, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, FlatList, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import BaseCard from '../common/BaseCard';
 import SectionTitle from '../common/SectionTitle';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SIDE_MARGIN = 80;
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
-
 export default function TrendingSection({ title, data, onPressItem }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const isTabletOrDesktop = screenWidth >= 768;
+  
+  const SIDE_MARGIN = isTabletOrDesktop ? 80 : 16;
+  const CONTAINER_WIDTH = Math.min(screenWidth - SIDE_MARGIN * 2, 1320);
+  const cardWidth = isTabletOrDesktop ? 360 : 280;
+  const cardHeight = isTabletOrDesktop ? 150 : 120;
+  const rankFontSize = isTabletOrDesktop ? 96 : 64;
+  const rankLeftOffset = isTabletOrDesktop ? 40 : 24;
+
   return (
-    <View style={styles.section}>
-      <View style={styles.container}>
+    <View style={[styles.section, { marginTop: isTabletOrDesktop ? 32 : 20 }]}>
+      <View style={[styles.container, { width: isTabletOrDesktop ? CONTAINER_WIDTH : screenWidth }]}>
         <SectionTitle title={title} icon="🔥" />
 
         <FlatList
@@ -18,22 +24,23 @@ export default function TrendingSection({ title, data, onPressItem }) {
           data={data}
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: isTabletOrDesktop ? 0 : 16 }}
           renderItem={({ item, index }) => {
             const rank = index + 1;
             const isLast = index === data.length - 1;
 
             return (
-              <View style={styles.itemWrapper}>
-                {/* Rank nhô ra bên trái */}
-                <Text style={styles.rank}>{rank}</Text>
+              <View style={[styles.itemWrapper, { height: cardHeight + 20, marginRight: isTabletOrDesktop ? 40 : 24 }]}>
+                {/* Rank number */}
+                <Text style={[styles.rank, { fontSize: rankFontSize, color: '#10b981' }]}>{rank}</Text>
 
                 <BaseCard
                   image={item.image}
-                  width={360}
-                  height={150}
+                  width={cardWidth}
+                  height={cardHeight}
                   showArrow={isLast}
                   onPress={() => onPressItem(item)}
-                  containerStyle={styles.cardWrapper}
+                  containerStyle={[styles.cardWrapper, { marginLeft: rankLeftOffset }]}
                 />
               </View>
             );
@@ -46,17 +53,11 @@ export default function TrendingSection({ title, data, onPressItem }) {
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 32,
     alignItems: 'center',
   },
-  container: {
-    width: CONTAINER_WIDTH,
-  },
+  container: {},
 
-  // --- UPDATED FOR RANK ---
   itemWrapper: {
-    marginRight: 40,
-    height: 150 + 20,
     justifyContent: 'center',
     position: 'relative',
   },
@@ -65,13 +66,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     bottom: 0,
-    fontSize: 96,
     fontWeight: '900',
-    color: '#22c55e',
     zIndex: -1,
   },
 
-  cardWrapper: {
-    marginLeft: 40, 
-  },
+  cardWrapper: {},
 });

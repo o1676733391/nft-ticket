@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { loginWithWallet } from '../services/walletAuth';
-import { loginWithEmail } from '../services/emailAuth';
+import { useAuth } from '../context/AuthContext';
 import { useAuthStore } from '../store/authStore';
 import Toast from 'react-native-toast-message';
 
@@ -18,6 +18,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onLoginSuccess
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
   const setUser = useAuthStore((state) => state.setUser);
   
   const isWeb = Platform.OS === 'web';
@@ -77,7 +78,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onLoginSuccess
     );
   }
 
-  // Mobile: Email/Password Authentication
+  // Mobile: Email/Password Authentication (using new Mobile API)
   return (
     <View style={styles.overlay}>
       <View style={styles.card}>
@@ -118,7 +119,7 @@ export default function LoginModal({ onClose, onSwitchToRegister, onLoginSuccess
               if (!email || !password) return;
               setIsLoading(true);
               try {
-                const { user } = await loginWithEmail(email, password);
+                const { user } = await login(email, password);
                 setUser(user, null); // No wallet address for email auth
                 Toast.show({
                   type: 'success',

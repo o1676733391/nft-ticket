@@ -1,23 +1,40 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function OrganizerSidebar() {
+export default function OrganizerSidebar({ onItemPress }) {
+  const handlePress = (item) => {
+    // Handle navigation or item selection here
+    onItemPress?.();
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Organizer Center</Text>
 
       <View style={styles.menu}>
-        <TouchableOpacity style={[styles.menuItem, styles.menuItemActive]} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={[styles.menuItem, styles.menuItemActive]} 
+          activeOpacity={0.8}
+          onPress={() => handlePress('events')}
+        >
           <Text style={styles.menuIcon}>📅</Text>
           <Text style={[styles.menuText, styles.menuTextActive]}>Sự kiện của tôi</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          activeOpacity={0.8}
+          onPress={() => handlePress('reports')}
+        >
           <Text style={styles.menuIcon}>📄</Text>
           <Text style={styles.menuText}>Quản lý báo cáo</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          activeOpacity={0.8}
+          onPress={() => handlePress('terms')}
+        >
           <Text style={styles.menuIcon}>📘</Text>
           <Text style={styles.menuText}>Điều khoản cho Ban tổ chức</Text>
         </TouchableOpacity>

@@ -1,5 +1,5 @@
 // src/screens/ProfileScreen.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProfileScreen({ navigation }) {
+  const { user, isAuthenticated } = useAuth();
+  
   const [profile, setProfile] = useState({
     name: "",
     phoneCountry: "+84",
@@ -22,6 +26,19 @@ export default function ProfileScreen({ navigation }) {
     dob: "",
     gender: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.full_name || user.username || "",
+        phoneCountry: "+84",
+        phone: user.phone || "",
+        email: user.email || "",
+        dob: "",
+        gender: "",
+      });
+    }
+  }, [user]);
 
   const setField = (k, v) => setProfile({ ...profile, [k]: v });
 
@@ -52,10 +69,10 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.leftCol}>
             <View style={styles.accountBox}>
               <Image
-                source={require("../../asset/concert-show-performance.jpg")}
+                source={user?.avatar_url ? { uri: user.avatar_url } : require("../../asset/concert-show-performance.jpg")}
                 style={styles.avatarSmall}
               />
-              <Text style={styles.leftTitle}>Tài khoản của</Text>
+              <Text style={styles.leftTitle}>Tài khoản của {user?.username || 'User'}</Text>
             </View>
 
             {menuItems.map((item) => (
@@ -94,7 +111,7 @@ export default function ProfileScreen({ navigation }) {
             {/* Avatar */}
             <View style={styles.avatarWrap}>
               <Image
-                source={require("../../asset/concert-show-performance.jpg")}
+                source={user?.avatar_url ? { uri: user.avatar_url } : require("../../asset/concert-show-performance.jpg")}
                 style={styles.avatarLarge}
               />
 

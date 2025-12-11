@@ -5,7 +5,10 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
+
+const isMobile = Platform.OS === 'android' || Platform.OS === 'ios';
 
 export default function BaseCard({
   image,
@@ -41,7 +44,30 @@ export default function BaseCard({
         ]}
       >
         {/* IMAGE */}
-        <Image source={image} style={styles.image} />
+        {image ? (
+          <Image 
+            source={
+              typeof image === 'string' 
+                ? { uri: image } 
+                : typeof image === 'number' 
+                  ? image 
+                  : image?.uri 
+                    ? { uri: image.uri }
+                    : require("../../../asset/concert-show-performance.jpg")
+            }
+            style={styles.image}
+            resizeMode="cover"
+            onError={(e) => console.error('BaseCard ❌ Error:', image, 'Type:', typeof image)}
+            onLoadStart={() => console.log('BaseCard Loading:', typeof image === 'string' ? image : 'local')}
+            onLoad={() => console.log('BaseCard ✅ Loaded')}
+          />
+        ) : (
+          <Image 
+            source={require("../../../asset/concert-show-performance.jpg")}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        )}
 
         {/* OVERLAY MỜ */}
         {showOverlay && <View style={styles.overlay} />}
@@ -96,6 +122,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     position: 'relative',
     borderWidth: 0,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 
   image: {
@@ -113,9 +144,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: -6,
     bottom: -12,
-    fontSize: 88,
+    fontSize: isMobile ? 64 : 88,
     fontWeight: '900',
-    color: '#22c55e55',
+    color: '#10b98155',
     zIndex: 1,
   },
 
@@ -127,46 +158,55 @@ const styles = StyleSheet.create({
   },
 
   arrowCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: isMobile ? 48 : 40,
+    height: isMobile ? 48 : 40,
+    borderRadius: isMobile ? 24 : 20,
+    backgroundColor: 'rgba(16,185,129,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 
   arrowText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: isMobile ? 22 : 20,
     fontWeight: '700',
   },
 
   title: {
-    marginTop: 10,
+    marginTop: isMobile ? 10 : 12,
     color: '#fff',
-    fontSize: 14,
+    fontSize: isMobile ? 14 : 15,
     fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
   price: {
-    marginTop: 4,
-    color: '#22c55e',
-    fontSize: 14,
-    fontWeight: '600',
+    marginTop: 5,
+    color: '#10b981',
+    fontSize: isMobile ? 14 : 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 6,
   },
 
   dateIcon: {
     marginRight: 6,
+    fontSize: isMobile ? 14 : 16,
   },
 
   dateText: {
-    color: '#e5e7eb',
-    fontSize: 13,
+    color: '#d1d5db',
+    fontSize: isMobile ? 13 : 14,
+    fontWeight: '500',
   },
 });

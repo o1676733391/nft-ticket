@@ -1,12 +1,18 @@
 import React from "react";
-import { View, Text, StyleSheet, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Dimensions, Platform } from "react-native";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
+const isMobile = Platform.OS === 'android' || Platform.OS === 'ios';
 const SIDE_MARGIN = 80;
 const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
 
 export default function Footer() {
+  // Hide footer on mobile
+  if (isMobile) {
+    return null;
+  }
+
   return (
     <View style={styles.footer}>
       <View style={styles.container}>

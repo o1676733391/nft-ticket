@@ -5,37 +5,55 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
+  ScrollView,
 } from "react-native";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SIDE_MARGIN = 80;
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
-
 export default function LocationSection({ title, data, onPressItem }) {
+  const { width: screenWidth } = useWindowDimensions();
+  const isTabletOrDesktop = screenWidth >= 768;
+  
+  const SIDE_MARGIN = isTabletOrDesktop ? 80 : 16;
+  const CONTAINER_WIDTH = Math.min(screenWidth - SIDE_MARGIN * 2, 1320);
+  const CARD_HEIGHT = isTabletOrDesktop ? 280 : 180;
+  const cardGap = isTabletOrDesktop ? 24 : 12;
+  
   return (
-    <View style={styles.section}>
-      <View style={styles.container}>
+    <View style={[styles.section, { marginTop: isTabletOrDesktop ? 32 : 24 }]}>
+      <View style={[styles.container, { 
+        width: isTabletOrDesktop ? CONTAINER_WIDTH : screenWidth,
+        paddingHorizontal: isTabletOrDesktop ? 0 : 16,
+      }]}>
 
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, {
+          fontSize: isTabletOrDesktop ? 22 : 20,
+          marginBottom: isTabletOrDesktop ? 16 : 14,
+        }]}>{title}</Text>
 
-        <View style={styles.row}>
-          {data.slice(0, 4).map((item, index) => (
+        <View style={[styles.row, { gap: cardGap }]}>
+          {data.slice(0, isTabletOrDesktop ? 4 : 2).map((item, index) => (
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.9}
-              style={[
-                styles.cardWrapper,
-                index === 3 && { marginRight: 0 }, // bỏ margin cuối
-              ]}
+              style={[styles.cardWrapper, {
+                width: isTabletOrDesktop 
+                  ? `calc((100% - ${cardGap * 3}px) / 4)` 
+                  : `calc((100% - ${cardGap}px) / 2)`,
+                height: CARD_HEIGHT,
+              }]}
               onPress={() => onPressItem?.(item)}
             >
-              <View style={styles.card}>
-                <Image source={item.image} style={styles.image} />
+              <View style={[styles.card, { height: CARD_HEIGHT }]}>
+                <Image 
+                  source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
+                  style={styles.image} 
+                />
 
                 <View style={styles.gradient} />
 
-                <Text style={styles.cardText}>{item.title}</Text>
+                <Text style={[styles.cardText, {
+                  fontSize: isTabletOrDesktop ? 20 : 16,
+                }]}>{item.title}</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -46,42 +64,39 @@ export default function LocationSection({ title, data, onPressItem }) {
   );
 }
 
-// CARD nhỏ hơn
-const CARD_HEIGHT = 280;
-
 const styles = StyleSheet.create({
   section: {
-    marginTop: 32,
     alignItems: "center",
   },
 
-  container: {
-    width: CONTAINER_WIDTH,
-  },
+  container: {},
 
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#fff",
-    marginBottom: 16,
+    letterSpacing: 0.5,
   },
 
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
   },
 
   cardWrapper: {
-    flex: 1,
-    marginRight: 20,
+    marginBottom: 12,
   },
 
   card: {
     width: "100%",
-    height: CARD_HEIGHT,
-    borderRadius: 22,
+    borderRadius: 16,
     overflow: "hidden",
     backgroundColor: "#000",
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 
   image: {
@@ -96,7 +111,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: "42%",
-    backgroundColor: "rgba(52, 168, 83, 0.55)",
+    backgroundColor: "rgba(16, 185, 129, 0.65)",
   },
 
   cardText: {
@@ -105,7 +120,7 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     color: "#fff",
-    fontSize: 22,     // nhỏ hơn bản trước
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
 });

@@ -8,6 +8,7 @@ import { eventRouter } from './routes/events';
 import marketplaceRouter from './routes/marketplace';
 import checkinRouter from './routes/checkin';
 import transactionsRouter from './routes/transactions';
+import mobileRouter from './routes/mobile';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
     res.send('NFT Ticketing REST API Server is running!');
 });
 
+// Blockchain-based routes (Web)
 app.use('/api/auth', authRouter);
 app.use('/api/tickets', ticketRouter);
 app.use('/api/ticket_templates', ticketTemplateRouter);
@@ -30,6 +32,9 @@ app.use('/api/events', eventRouter);
 app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/checkin', checkinRouter);
 app.use('/api/transactions', transactionsRouter);
+
+// Mobile-only routes (No blockchain)
+app.use('/api/mobile', mobileRouter);
 
 
 // Start Server

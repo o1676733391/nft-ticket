@@ -5,37 +5,46 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import BaseCard from "../common/BaseCard";
 import SectionTitle from "../common/SectionTitle";
 import { useNavigation } from "@react-navigation/native";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SIDE_MARGIN = 80;
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
-
 export default function HorizontalEventSection({ title, data, onPressMore }) {
   const navigation = useNavigation();
+  const { width: screenWidth } = useWindowDimensions();
+  const isTabletOrDesktop = screenWidth >= 768;
+  
+  const SIDE_MARGIN = isTabletOrDesktop ? 80 : 16;
+  const CONTAINER_WIDTH = Math.min(screenWidth - SIDE_MARGIN * 2, 1320);
+  const cardWidth = isTabletOrDesktop ? 360 : 280;
+  const cardHeight = isTabletOrDesktop ? 170 : 140;
+  const cardSpacing = isTabletOrDesktop ? 24 : 12;
 
   const openDetail = (item) => {
     navigation.navigate("EventDetail", { event: item });
   };
 
   return (
-    <View style={styles.section}>
-      <View style={styles.container}>
+    <View style={[styles.section, { marginTop: isTabletOrDesktop ? 32 : 20 }]}>
+      <View style={[styles.container, { width: isTabletOrDesktop ? CONTAINER_WIDTH : screenWidth }]}>
 
         {/* Header */}
-        <View style={styles.headerRow}>
-          <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={[styles.headerRow, { paddingHorizontal: isTabletOrDesktop ? 0 : 16 }]}>
+          <Text style={[styles.sectionTitle, { 
+            fontSize: isTabletOrDesktop ? 22 : 20,
+            marginBottom: isTabletOrDesktop ? 16 : 14,
+          }]}>{title}</Text>
 
-          <TouchableOpacity onPress={onPressMore}>
-            <View style={styles.moreRow}>
-              <Text style={styles.moreText}>Xem thêm</Text>
-              <Text style={styles.moreArrow}>›</Text>
-            </View>
-          </TouchableOpacity>
+          {isTabletOrDesktop && (
+            <TouchableOpacity onPress={onPressMore}>
+              <View style={styles.moreRow}>
+                <Text style={styles.moreText}>Xem thêm</Text>
+                <Text style={styles.moreArrow}>›</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Card list */}
@@ -44,16 +53,17 @@ export default function HorizontalEventSection({ title, data, onPressMore }) {
           data={data}
           keyExtractor={(item) => item.id.toString()}
           showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: isTabletOrDesktop ? 0 : 16 }}
           renderItem={({ item }) => (
             <BaseCard
               image={item.image}
-              width={360}
-              height={170}
+              width={cardWidth}
+              height={cardHeight}
               title={item.title}
               price={item.price}
               date={item.date}
               onPress={() => openDetail(item)}    
-              containerStyle={{ marginRight: 24 }}
+              containerStyle={{ marginRight: cardSpacing }}
             />
           )}
         />
@@ -64,24 +74,20 @@ export default function HorizontalEventSection({ title, data, onPressMore }) {
 
 const styles = StyleSheet.create({
   section: {
-    marginTop: 32,
     alignItems: "center",
   },
-  container: {
-    width: CONTAINER_WIDTH,
-  },
+  container: {},
 
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
   },
 
   sectionTitle: {
     color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 
   moreRow: {
@@ -91,6 +97,7 @@ const styles = StyleSheet.create({
   moreText: {
     fontSize: 14,
     color: "#e5e7eb",
+    fontWeight: "600",
   },
   moreArrow: {
     marginLeft: 4,

@@ -23,7 +23,17 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
   
   // Use Zustand store if available, fallback to props/context
   const user = storeUser || userProp || auth.user;
-  const route = useRoute();
+  
+  // Check if user is organizer
+  const isOrganizer = user?.acc_type === 'organizer' || user?.accType === 'organizer';
+  
+  // Safely get route - may not be available in all contexts
+  let route = null;
+  try {
+    route = useRoute();
+  } catch (e) {
+    // useRoute may fail in certain navigation contexts
+  }
 
   const [searchText, setSearchText] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -36,6 +46,7 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
   };
 
   const isWeb = Platform.OS === "web";
+  const isMobile = Platform.OS === "android" || Platform.OS === "ios";
 
   const handleBack = () => {
     try {
@@ -45,7 +56,9 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
       }
     } catch (e) {}
 
-    if (window?.history?.length) window.history.back();
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window?.history?.length) {
+      window.history.back();
+    }
   };
 
   const handleAccountToggle = () => setShowAccountMenu((s) => !s);
@@ -65,7 +78,7 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
 
   return (
     <View style={{ zIndex: 200 }}>
-      <View style={styles.header}>
+      <View style={[styles.header, isMobile && styles.headerMobile]}>
         {isWeb &&
           route?.name !== "Home" &&
           navigation.canGoBack() && (
@@ -75,30 +88,43 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
           )}
 
         <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.logo}>ticketbox</Text>
+          <Text style={[styles.logo, isMobile && styles.logoMobile]}>ticketbox</Text>
         </TouchableOpacity>
 
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, isMobile && styles.searchContainerMobile]}>
           <TextInput
-            placeholder="Bạn tìm gì hôm nay?"
+            placeholder={isMobile ? "Tìm kiếm..." : "Bạn tìm gì hôm nay?"}
             placeholderTextColor="#666"
-            style={styles.searchInput}
+            style={[styles.searchInput, isMobile && styles.searchInputMobile]}
             value={searchText}
             onChangeText={setSearchText}
             onFocus={() => setShowDropdown(true)}
+            onSubmitEditing={handleSearchPress}
+            returnKeyType="search"
           />
 
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={handleSearchPress}
-          >
-            <Text style={styles.searchButtonText}>Tìm kiếm</Text>
-          </TouchableOpacity>
+          {isMobile ? (
+            <TouchableOpacity
+              style={styles.searchIconButton}
+              onPress={handleSearchPress}
+            >
+              <Text style={styles.searchIcon}>🔍</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={handleSearchPress}
+            >
+              <Text style={styles.searchButtonText}>Tìm kiếm</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate("CreateEvent")}>
-          <Text style={styles.createButton}>Tạo sự kiện</Text>
-        </TouchableOpacity>
+        {!isMobile && (
+          <TouchableOpacity onPress={() => navigation.navigate("CreateEvent")}>
+            <Text style={styles.createButton}>Tạo sự kiện</Text>
+          </TouchableOpacity>
+        )}
 
         {user ? (
           <View>
@@ -107,7 +133,10 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
               onPress={handleAccountToggle}
             >
               {user.avatar ? (
-                <Image source={user.avatar} style={styles.avatar} />
+                <Image 
+                  source={typeof user.avatar === 'string' ? { uri: user.avatar } : user.avatar} 
+                  style={styles.avatar} 
+                />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarPlaceholderText}>👤</Text>
@@ -123,6 +152,20 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
 
             {showAccountMenu && (
               <View style={styles.accountMenu}>
+                {/* Nếu là organizer, hiển thị nút chuyển sang Organizer Dashboard */}
+                {isOrganizer && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.accountMenuItem}
+                      onPress={() => handleMenuNavigate("OrganizerMain")}
+                    >
+                      <Text style={styles.accountMenuIcon}>📊</Text>
+                      <Text style={styles.accountMenuText}>Organizer Dashboard</Text>
+                    </TouchableOpacity>
+                    <View style={styles.menuDivider} />
+                  </>
+                )}
+
                 <TouchableOpacity
                   style={styles.accountMenuItem}
                   onPress={() => handleMenuNavigate("MyTickets")}
@@ -168,13 +211,6 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
         visible={showDropdown}
         onRequestClose={() => setShowDropdown(false)}
         recentSearches={["anh trai say hi", "soobin", "idecaf"]}
-        categories={[
-          { title: "Nhạc sống", image: require("../../asset/flower-workshop.jpg") },
-          { title: "Sân khấu & Nghệ thuật", image: require("../../asset/flower-workshop.jpg") },
-          { title: "Thể Thao", image: require("../../asset/flower-workshop.jpg") },
-          { title: "Khác", image: require("../../asset/flower-workshop.jpg") },
-        ]}
-        suggestedEvents={homeData.forYouEvents}
       />
     </View>
   );
@@ -185,35 +221,74 @@ export default function Header({ onLoginPress, user: userProp, onLogout }) {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: "#19c48a",
+    backgroundColor: "#10b981",
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     flexWrap: "wrap",
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerMobile: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 10,
   },
   logo: {
     color: "#fff",
     fontSize: 24,
     fontWeight: "bold",
     minWidth: 100,
+    letterSpacing: 0.5,
+  },
+  logoMobile: {
+    fontSize: 22,
+    minWidth: 90,
   },
   searchContainer: {
     flex: 1,
     minWidth: 200,
     backgroundColor: "#fff",
     flexDirection: "row",
-    borderRadius: 6,
+    borderRadius: 24,
     overflow: "hidden",
     alignItems: "center",
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  searchContainerMobile: {
+    minWidth: 150,
+    flex: 2,
+    borderRadius: 20,
   },
   searchInput: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     fontSize: 14,
     outlineStyle: "none",
+    color: '#1f2937',
+  },
+  searchInputMobile: {
+    paddingVertical: 8,
+    fontSize: 13,
+  },
+  searchIconButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchIcon: {
+    fontSize: 18,
   },
   searchButton: {
     paddingHorizontal: 16,
@@ -303,6 +378,11 @@ const styles = StyleSheet.create({
   accountMenuText: {
     color: "#111",
     fontSize: 14,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginVertical: 4,
   },
   backButton: {
     width: 36,

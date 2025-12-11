@@ -6,25 +6,23 @@ import {
   StyleSheet,
   Pressable,
   Switch,
-  Dimensions,
+  useWindowDimensions,
+  ScrollView,
 } from "react-native";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SIDE_MARGIN = 80;
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
-const SIDE_GAP = (SCREEN_WIDTH - CONTAINER_WIDTH) / 2;
-
 export default function FilterDropdown({ visible, onClose, onApply }) {
-  if (!visible) return null;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isTabletOrDesktop = screenWidth >= 768;
 
   /* -----------------------------
-        STATES
+        STATES - Must be before any return!
   ----------------------------- */
   const [location, setLocation] = useState("all");
   const [freeOnly, setFreeOnly] = useState(false);
-
-  // FE-selected text (giữ nguyên)
   const [categories, setCategories] = useState([]);
+  
+  // Early return AFTER all hooks
+  if (!visible) return null;
 
   // Mapping FE → prefix
   const categoryMap = {
@@ -62,17 +60,37 @@ export default function FilterDropdown({ visible, onClose, onApply }) {
     onApply({
       location,
       freeOnly,
-      categories: mappedCategory, // CHỈNH Ở ĐÂY
+      categories: mappedCategory,
     });
 
     onClose();
+  };
+
+  // Mobile-first dynamic styles
+  const dynamicStyles = {
+    box: {
+      position: "absolute",
+      top: isTabletOrDesktop ? 130 : 100,
+      left: isTabletOrDesktop ? undefined : 16,
+      right: isTabletOrDesktop ? 100 : 16,
+      width: isTabletOrDesktop ? 600 : screenWidth - 32,
+      maxHeight: screenHeight - 160,
+      backgroundColor: "#1f2937",
+      borderRadius: 16,
+      padding: isTabletOrDesktop ? 20 : 16,
+      elevation: 12,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+    },
   };
 
   return (
     <View style={styles.root}>
       <Pressable style={styles.backdrop} onPress={onClose} />
 
-      <View style={styles.box}>
+      <ScrollView style={dynamicStyles.box} showsVerticalScrollIndicator={false}>
         {/* Vị trí */}
         <Text style={styles.sectionTitle}>Vị trí</Text>
 
@@ -105,8 +123,8 @@ export default function FilterDropdown({ visible, onClose, onApply }) {
           <Switch
             value={freeOnly}
             onValueChange={(val) => setFreeOnly(val)}
-            thumbColor={freeOnly ? "#16a34a" : "#ccc"}
-            trackColor={{ true: "#16a34a55", false: "#ccc" }}
+            thumbColor={freeOnly ? "#10b981" : "#6b7280"}
+            trackColor={{ true: "#10b98155", false: "#374151" }}
           />
         </View>
 
@@ -146,32 +164,119 @@ export default function FilterDropdown({ visible, onClose, onApply }) {
             <Text style={styles.applyText}>Áp dụng</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
-/* Styles giữ nguyên */
+/* Dark theme styles */
 const styles = StyleSheet.create({
-  root: { position: "absolute", top: 0, left: 0, width: SCREEN_WIDTH, height: "100%", zIndex: 2000 },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
-  box: { position: "absolute", top: 70, right: SIDE_GAP + 0, width: 600, backgroundColor: "#fff", borderRadius: 10, padding: 20, elevation: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 10, marginTop: 10 },
-  radioRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: "#16a34a", justifyContent: "center", alignItems: "center", marginRight: 10 },
-  radioInner: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#16a34a" },
-  radioLabel: { fontSize: 16 },
-  divider: { height: 1, backgroundColor: "#ddd", marginVertical: 15 },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
-  priceLabel: { fontSize: 16 },
-  categoryWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  categoryBtn: { paddingVertical: 8, paddingHorizontal: 16, backgroundColor: "#eee", borderRadius: 20 },
-  categoryBtnActive: { backgroundColor: "#16a34a33" },
-  categoryText: { fontSize: 15 },
-  categoryTextActive: { fontWeight: "700", color: "#16a34a" },
-  footer: { marginTop: 25, flexDirection: "row", justifyContent: "space-between" },
-  resetBtn: { borderColor: "#16a34a", borderWidth: 1, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
-  resetText: { fontSize: 16, fontWeight: "600", color: "#16a34a" },
-  applyBtn: { backgroundColor: "#16a34a", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 8 },
-  applyText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  root: { 
+    ...StyleSheet.absoluteFillObject, 
+    zIndex: 100,
+  },
+  backdrop: { 
+    ...StyleSheet.absoluteFillObject, 
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: "700", 
+    marginBottom: 12, 
+    marginTop: 10,
+    color: "#fff",
+  },
+  radioRow: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
+  radioOuter: { 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
+    borderWidth: 2, 
+    borderColor: "#10b981", 
+    justifyContent: "center", 
+    alignItems: "center", 
+    marginRight: 12,
+  },
+  radioInner: { 
+    width: 12, 
+    height: 12, 
+    borderRadius: 6, 
+    backgroundColor: "#10b981",
+  },
+  radioLabel: { 
+    fontSize: 16, 
+    color: "#d1d5db",
+  },
+  divider: { 
+    height: 1, 
+    backgroundColor: "#374151", 
+    marginVertical: 16,
+  },
+  priceRow: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center",
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  priceLabel: { 
+    fontSize: 16, 
+    color: "#d1d5db",
+  },
+  categoryWrap: { 
+    flexDirection: "row", 
+    flexWrap: "wrap", 
+    gap: 10,
+  },
+  categoryBtn: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 16, 
+    backgroundColor: "#374151", 
+    borderRadius: 20,
+  },
+  categoryBtnActive: { 
+    backgroundColor: "#10b98133",
+  },
+  categoryText: { 
+    fontSize: 15, 
+    color: "#9ca3af",
+  },
+  categoryTextActive: { 
+    fontWeight: "700", 
+    color: "#10b981",
+  },
+  footer: { 
+    marginTop: 25, 
+    marginBottom: 20,
+    flexDirection: "row", 
+    justifyContent: "space-between",
+  },
+  resetBtn: { 
+    borderColor: "#10b981", 
+    borderWidth: 1.5, 
+    paddingHorizontal: 20, 
+    paddingVertical: 12, 
+    borderRadius: 12,
+  },
+  resetText: { 
+    fontSize: 16, 
+    fontWeight: "600", 
+    color: "#10b981",
+  },
+  applyBtn: { 
+    backgroundColor: "#10b981", 
+    paddingHorizontal: 28, 
+    paddingVertical: 12, 
+    borderRadius: 12,
+  },
+  applyText: { 
+    fontSize: 16, 
+    fontWeight: "700", 
+    color: "#fff",
+  },
 });

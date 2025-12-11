@@ -5,13 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
+  ScrollView,
 } from "react-native";
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SIDE_MARGIN = 80;
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - SIDE_MARGIN * 2, 1320);
-const SIDE_GAP = (SCREEN_WIDTH - CONTAINER_WIDTH) / 2;
 
 /* -----------------------------------------------------
    DATE RANGE LOGIC — CHUẨN TICKETBOX
@@ -83,14 +79,19 @@ function getDaysInMonth(year, month) {
 ----------------------------------------------------- */
 
 export default function DateFilterDropdown({ visible, onClose, onApply }) {
-  if (!visible) return null;
-
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isTabletOrDesktop = screenWidth >= 768;
+  
   const today = new Date();
 
+  // All hooks MUST be called before any return statement
   const [activeTab, setActiveTab] = useState("today");
   const [selectedRange, setSelectedRange] = useState(getTodayRange());
   const [displayYear, setDisplayYear] = useState(today.getFullYear());
   const [displayMonth, setDisplayMonth] = useState(today.getMonth());
+
+  // Early return AFTER all hooks
+  if (!visible) return null;
 
   /* -----------------------------------
      Khi đổi TAB → cập nhật range + tháng
@@ -140,23 +141,48 @@ export default function DateFilterDropdown({ visible, onClose, onApply }) {
     onClose();
   };
 
+  // Mobile-first styles
+  const dynamicStyles = {
+    dropdown: {
+      position: isTabletOrDesktop ? "absolute" : "absolute",
+      top: isTabletOrDesktop ? 130 : 100,
+      left: isTabletOrDesktop ? undefined : 16,
+      right: isTabletOrDesktop ? 100 : 16,
+      width: isTabletOrDesktop ? 700 : screenWidth - 32,
+      maxHeight: screenHeight - 160,
+      backgroundColor: "#1f2937",
+      borderRadius: 16,
+      padding: isTabletOrDesktop ? 20 : 16,
+      elevation: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+    },
+  };
+
   return (
     <View style={styles.root}>
       {/* BLUR BACKDROP */}
       <Pressable style={styles.backdrop} onPress={onClose} />
 
-      <View style={styles.dropdown}>
+      <View style={dynamicStyles.dropdown}>
         {/* TAB ROW */}
-        <View style={styles.tabRow}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabScrollView}
+          contentContainerStyle={styles.tabRow}
+        >
           <Tab id="today" label="Hôm nay" active={activeTab} onPress={handleTab} />
           <Tab id="tomorrow" label="Ngày mai" active={activeTab} onPress={handleTab} />
           <Tab id="weekend" label="Cuối tuần này" active={activeTab} onPress={handleTab} />
           <Tab id="month" label="Tháng này" active={activeTab} onPress={handleTab} />
-        </View>
+        </ScrollView>
 
         {/* MONTH TITLE */}
         <Text style={styles.monthTitle}>
-          Tháng {displayMonth + 1}, {displayYear}
+          {displayYear}
         </Text>
 
         {/* WEEK HEADER */}
@@ -188,10 +214,6 @@ export default function DateFilterDropdown({ visible, onClose, onApply }) {
 
         {/* FOOTER */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.resetBtn} onPress={() => handleTab("today")}>
-            <Text style={styles.resetText}>Thiết lập lại</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.applyBtn} onPress={apply}>
             <Text style={styles.applyText}>Áp dụng</Text>
           </TouchableOpacity>
@@ -222,68 +244,63 @@ const Tab = ({ id, label, active, onPress }) => (
 
 const styles = StyleSheet.create({
   root: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: SCREEN_WIDTH,
-    height: "100%",
-    zIndex: 1500,
-  },
-  backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    zIndex: 100,
   },
 
-  dropdown: {
-    position: "absolute",
-    top: 70,
-    right: SIDE_GAP + 10,
-    width: 700,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    elevation: 12,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
 
   /* Tabs */
+  tabScrollView: {
+    marginBottom: 16,
+  },
   tabRow: {
     flexDirection: "row",
-    marginBottom: 15,
+    gap: 8,
+    paddingHorizontal: 4,
   },
   tab: {
-    backgroundColor: "#f1f1f1",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    marginRight: 8,
-    borderRadius: 8,
+    backgroundColor: "#374151",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
   },
   tabActive: {
-    backgroundColor: "#16a34a22",
+    backgroundColor: "#10b981",
   },
   tabText: {
-    fontSize: 15,
+    fontSize: 14,
+    color: "#9ca3af",
+    fontWeight: "600",
   },
   tabTextActive: {
     fontWeight: "700",
-    color: "#16a34a",
+    color: "#fff",
   },
 
   monthTitle: {
     textAlign: "center",
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 16,
+    color: "#fff",
   },
 
   weekHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   weekTxt: {
     width: "14.285%",
     textAlign: "center",
-    color: "#666",
+    color: "#9ca3af",
+    fontSize: 14,
+    fontWeight: "600",
   },
 
   grid: {
@@ -292,48 +309,39 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width: "14.285%",
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
     borderRadius: 8,
   },
   dayText: {
     fontSize: 16,
-    color: "#333",
+    color: "#d1d5db",
+    fontWeight: "500",
   },
   dayActive: {
-    backgroundColor: "#16a34a33",
+    backgroundColor: "#10b98133",
   },
   dayTextActive: {
-    color: "#0e5f28",
-    fontWeight: "700",
+    color: "#10b981",
+    fontWeight: "800",
   },
 
   footer: {
     marginTop: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  resetBtn: {
-    borderColor: "#16a34a",
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  resetText: {
-    color: "#16a34a",
-    fontWeight: "700",
+    alignItems: "center",
   },
 
   applyBtn: {
-    backgroundColor: "#eee",
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: "#10b981",
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    minWidth: 160,
+    alignItems: "center",
   },
   applyText: {
     fontWeight: "700",
     fontSize: 16,
+    color: "#fff",
   },
 });
